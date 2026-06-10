@@ -4,7 +4,8 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-    adapter: DrizzleAdapter(db), // Directs NextAuth to write users/accounts to Neon
+    adapter: DrizzleAdapter(db),
+    session: { strategy: "jwt" }, // FORCE JWT sessions to prevent database session token errors
     providers: [
         Google({
             clientId: process.env.AUTH_GOOGLE_ID,
@@ -19,7 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (session.user && token) {
                 session.user.id = token.id as string;
             }
             return session;
