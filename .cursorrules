@@ -1,0 +1,65 @@
+# SMART-TRACK PROJECT SPECIFICATION & GUIDELINES
+
+## PROJECT OVERVIEW
+- Name: smart-track
+- Stack: Next.js (App Router, React 19), TypeScript, Tailwind CSS, shadcn/ui, React Hook Form + Zod, Drizzle ORM + Neon PostgreSQL (Serverless), Auth.js (NextAuth v5) with Google OAuth, Stripe (Checkout + Webhooks).
+
+## ARCHITECTURE & DIRECTORIES
+- src/app: Next.js App Router routes, layouts, and page structures.
+  - UI pages use `page.tsx`.
+  - Server routes (like Stripe webhooks) use `route.ts`.
+  - Place server actions in `actions.ts` files adjacent to the pages or within a centralized `src/app/actions/` directory.
+- src/components: Presentational and interactive client components. Shared UI components go under `src/components/ui` (shadcn/ui).
+- src/db: Database configuration and migrations.
+  - `src/db/index.ts`: Neon client and Drizzle initialization.
+  - `src/db/schema.ts`: Single source of truth for Drizzle table schemas.
+- src/lib: Reusable utility modules and clients.
+  - `src/lib/auth.ts`: Auth.js v5 configuration (OAuth adapters and session handlers).
+  - `src/lib/stripe.ts`: Stripe SDK initialization, subscription utilities, and billing helpers.
+  - `src/lib/utils.ts`: Standard UI class merger helpers (`cn`).
+
+## AUTHENTICATION & MIDDLEWARE RULES
+- Implement Auth.js v5 middleware configuration for route protection.
+- Route Gating Rules:
+  - Not authenticated + trying to access a protected route (/dashboard, /calendar, /planner, /habits, /exams) → redirect to `/login`.
+  - Authenticated + profile onboarding not complete (`onboarded` flag is false in the user record) → redirect to `/onboarding`.
+  - Authenticated + hitting `/login` or `/register` → redirect to `/dashboard`.
+- Public routes: `/`, `/login`, `/api/auth/*`, `/api/webhooks/stripe`, static assets.
+- Session Retrieval: Prefer Next.js server session checks (`auth()`) inside Server Components and Server Actions to protect data execution.
+
+## DATABASE & STRIPE SUBSCRIPTION MODEL
+- Use Drizzle ORM for all query and mutation execution.
+- Strict snake_case naming for database columns and table names; camelCase for TypeScript fields.
+- Stripe Tier Enforcements (Limits):
+  - Check the subscription status of the authenticated user in the database before completing mutations.
+  - Free Tier limitations: Max 5 active habits, max 15 active tasks, no access to advanced AI planner integration.
+  - Premium Tier: Unlimited items, Google Calendar sync scope, and AI chat capabilities.
+
+## FORMS & VALIDATION
+- Combine React Hook Form with Zod schema validation using the `@hookform/resolvers/zod` package.
+- Move client-side forms to `src/components/` and use Next.js Server Actions with `'use server'` for database mutations.
+- Keep submission handlers lean. Use React's `useTransition` or `useActionState` to track pending/disabled button states.
+- Render successes or errors using the `sonner` toast notification system.
+
+## UI/UX & STYLING CONVENTIONS
+- Ensure strict **mobile-first responsive design** using Tailwind breakpoint classes (`sm:`, `md:`, `lg:`). Avoid absolute pixel widths on outer containers that break layout continuity on smaller viewports.
+- Responsive Navigation:
+  - Hide the main navigation sidebar on viewports below `md`.
+  - Provide a slide-out drawer (`Sheet` component) triggered by a Hamburger menu button for smaller screens.
+- Keep component styles minimal, unified, and consistent with the dark/light theme options using Tailwind CSS.
+
+## CODING STANDARDS
+- Enable strict TypeScript configurations. Do not use the `any` type.
+- Prefer early returns over nested logical paths to keep code readable.
+- Avoid large, monolithic files (>300 lines of code). Break down massive UI pages into modular subcomponents located in a nearby directory.
+- Avoid unnecessary `try/catch` statements for database mutations inside Server Actions; let the top-level error boundaries handle unforeseen exceptions, but catch expected user-facing actions to return structured error messages: `{ success: false, error: "message" }`.
+
+## NAMING CONVENTIONS
+- File names: kebab-case (e.g., `user-profile-card.tsx`).
+- Components & Interfaces: PascalCase (e.g., `UserProfileCard`, `UserProfile`).
+- Functions & Variables: camelCase (e.g., `getUserProfile`, `currentUser`). Define functions as arrows: `const fetchItems = async () => {}`.
+- Database Table Columns: snake_case (e.g., `stripe_customer_id`, `created_at`).
+
+## GIT & COMMITS
+- Maintain a highly logical, descriptive, and modular git commit history. Commit each feature module only after the TypeScript compilation succeeds and the UI behaves cleanly.
+- Commit messages must follow imperative style and explain *what* change was introduced (e.g., "feat: design responsive app layout shell with side drawer for mobile viewports").
