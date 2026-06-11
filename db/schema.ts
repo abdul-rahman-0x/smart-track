@@ -77,9 +77,17 @@ export const habits = pgTable("habit", {
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    category: text("category").default("vitality").notNull(), // "intellect" | "vitality" | "mindfulness"
     streak: integer("streak").default(0).notNull(),
-    lastCompleted: timestamp("last_completed", { mode: "date" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const habitCompletions = pgTable("habit_completion", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    habitId: uuid("habitId")
+        .notNull()
+        .references(() => habits.id, { onDelete: "cascade" }),
+    completedAt: timestamp("completed_at", { mode: "date" }).notNull(),
 });
 
 export const tasks = pgTable("task", {
