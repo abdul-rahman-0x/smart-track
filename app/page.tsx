@@ -198,7 +198,7 @@ export default function Home() {
                             Ready to take control of your semester?
                         </h2>
                         <p className="max-w-lg text-muted-foreground">
-                            Join smart-track and bring your habits, planner, and
+                            Join smart track and bring your habits, planner, and
                             exam prep into one calm dashboard.
                         </p>
                         <Button asChild size="lg" className="min-w-44">

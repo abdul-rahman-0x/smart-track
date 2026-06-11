@@ -18,7 +18,7 @@ export default async function LoginPage() {
                 <Link
                     href="/"
                     className="text-sm font-semibold tracking-tight text-stone-900 dark:text-zinc-50">
-                    smart-track
+                    smart track
                 </Link>
                 <ModeToggle />
             </header>
@@ -30,14 +30,14 @@ export default async function LoginPage() {
                             Welcome back
                         </h1>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Sign in to access your smart-track dashboard.
+                            Sign in to access your smart track dashboard.
                         </p>
                     </div>
 
                     <LoginForm />
 
                     <p className="mt-6 text-center text-xs text-muted-foreground">
-                        By continuing, you agree to smart-track&apos;s terms of
+                        By continuing, you agree to smart track&apos;s terms of
                         service and privacy policy.
                     </p>
                 </div>

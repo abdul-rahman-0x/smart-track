@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "smart-track",
-    description: "Your unified academic and productivity dashboard",
+    title: "Smart Track",
+    description:
+        "A simple and clean planner to manage your daily tasks, habits, and academic milestones.",
 };
 export default function RootLayout({
     children,

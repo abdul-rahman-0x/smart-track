@@ -23,12 +23,10 @@ export const BrandMark = ({
             className={cn(
                 "flex min-w-0 items-center gap-2.5",
                 href && "transition-opacity hover:opacity-80",
-                className
+                className,
             )}>
             <Logo
-                className={cn(
-                    size === "sm" ? "size-6" : "size-7 sm:size-8"
-                )}
+                className={cn(size === "sm" ? "size-6" : "size-7 sm:size-8")}
             />
             <div className="min-w-0">
                 <p
@@ -37,9 +35,9 @@ export const BrandMark = ({
                         size === "sm" ? "text-sm" : "text-base",
                         variant === "sidebar"
                             ? "text-sidebar-foreground"
-                            : "text-stone-900 dark:text-zinc-50"
+                            : "text-stone-900 dark:text-zinc-50",
                     )}>
-                    smart-track
+                    SMART TRACK
                 </p>
                 {showTagline ? (
                     <p className="text-xs text-muted-foreground transition-none">
