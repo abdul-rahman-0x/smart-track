@@ -43,11 +43,17 @@ export default async function DashboardPage() {
         daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
+    const nameParts = session?.user?.name?.split(" ");
+    const displayName =
+        nameParts && nameParts.length > 0
+            ? nameParts.slice(0, 2).join(" ")
+            : "User";
+
     return (
         <div className="space-y-8">
             <div>
                 <h2 className="text-3xl font-bold tracking-tight">
-                    Welcome back, {session?.user?.name?.split(" ")[0] || "User"}
+                    Welcome back, {displayName}
                 </h2>
                 <p className="text-stone-500 dark:text-stone-400">
                     Here is a snapshot of your academic progress for today.
