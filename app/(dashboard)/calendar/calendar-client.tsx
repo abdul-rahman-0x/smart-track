@@ -121,11 +121,11 @@ export function CalendarClient({ initialTasks }: CalendarClientProps) {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">
-                        {currentYear} Year at a Glance
+                        {currentYear} Consistency Roadmap
                     </h2>
                     <p className="text-stone-500 dark:text-stone-400">
-                        Select any colored date cell to navigate directly to
-                        your daily schedule.
+                        See your daily goals, track your progress, and manage
+                        your year.
                     </p>
                 </div>
 
@@ -155,7 +155,7 @@ export function CalendarClient({ initialTasks }: CalendarClientProps) {
             <Card className="border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/40 shadow-none rounded-2xl">
                 <div className="p-6 space-y-4">
                     <h4 className="font-bold text-sm text-stone-800 dark:text-stone-200">
-                        Understanding Your Consistency Tracker
+                        Daily Progress Key
                     </h4>
                     <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
                         {/* Legend 1: No Tasks */}
