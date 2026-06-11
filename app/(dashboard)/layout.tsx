@@ -15,5 +15,5 @@ export default async function DashboardLayout({
         redirect("/login");
     }
 
-    return <AppLayout>{children}</AppLayout>;
+    return <AppLayout session={session}>{children}</AppLayout>;
 }
