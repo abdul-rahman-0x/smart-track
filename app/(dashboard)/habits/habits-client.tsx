@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -238,7 +238,7 @@ export function HabitsClient({
                                                                 : "bg-white border-stone-200 dark:bg-stone-950 dark:border-stone-800 hover:bg-stone-50"
                                                         }`}>
                                                         {isCompleted && (
-                                                            <Check className="w-4 h-4 stroke-[3]" />
+                                                            <Check className="w-4 h-4 stroke-3" />
                                                         )}
                                                     </button>
                                                 </div>
