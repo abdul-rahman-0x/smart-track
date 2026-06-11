@@ -114,7 +114,13 @@ export default function Home() {
             <header className="border-b border-border">
                 <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
                     <BrandMark href="/" size="sm" />
-                    <ModeToggle />
+
+                    <div className="flex items-center gap-3">
+                        <ModeToggle />
+                        <Button asChild variant="outline" size="lg">
+                            <Link href="/login">Sign in</Link>
+                        </Button>
+                    </div>
                 </div>
             </header>
 
@@ -131,16 +137,14 @@ export default function Home() {
                             </span>
                         </h1>
                         <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                            A unified workspace for habits, tasks, and exam
-                            prep — designed to keep students focused without the
+                            A unified workspace for habits, tasks, and exam prep
+                            — designed to keep students focused without the
                             noise.
                         </p>
+
                         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                             <Button asChild size="lg" className="min-w-40">
                                 <Link href="/dashboard">Get Started</Link>
-                            </Button>
-                            <Button asChild variant="outline" size="lg">
-                                <Link href="/login">Sign in</Link>
                             </Button>
                         </div>
                     </div>
@@ -160,7 +164,12 @@ export default function Home() {
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                             {features.map(
-                                ({ title, description, icon: Icon, preview }) => (
+                                ({
+                                    title,
+                                    description,
+                                    icon: Icon,
+                                    preview,
+                                }) => (
                                     <article
                                         key={title}
                                         className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -177,7 +186,7 @@ export default function Home() {
                                             {preview}
                                         </div>
                                     </article>
-                                )
+                                ),
                             )}
                         </div>
                     </div>
