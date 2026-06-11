@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { logCompletedSession } from "./actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Play, Pause, RotateCcw, AlertTriangle } from "lucide-react";
 
 interface FocusClientProps {
@@ -12,18 +13,21 @@ interface FocusClientProps {
 
 type TimerMode = "focus" | "shortBreak" | "longBreak";
 
-const MODE_TIMES: Record<TimerMode, number> = {
-    focus: 25 * 60, // 25 minutes
-    shortBreak: 5 * 60, // 5 minutes
-    longBreak: 15 * 60, // 15 minutes
-};
-
 export function FocusClient({ initialFocusCount }: FocusClientProps) {
     const [mode, setMode] = useState<TimerMode>("focus");
-    const [secondsLeft, setSecondsLeft] = useState(MODE_TIMES.focus);
     const [isRunning, setIsRunning] = useState(false);
     const [focusCount, setFocusCount] = useState(initialFocusCount);
     const [showPaywall, setShowPaywall] = useState(false);
+
+    // 1. DYNAMIC STATE: Store custom minutes per mode (Defaults to standard 25, 5, 15)
+    const [customTimes, setCustomTimes] = useState<Record<TimerMode, number>>({
+        focus: 25,
+        shortBreak: 5,
+        longBreak: 15,
+    });
+
+    // Calculate standard seconds left based on the active custom minutes selection
+    const [secondsLeft, setSecondsLeft] = useState(customTimes.focus * 60);
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -31,17 +35,36 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
     const switchMode = (newMode: TimerMode) => {
         setIsRunning(false);
         setMode(newMode);
-        setSecondsLeft(MODE_TIMES[newMode]);
+        setSecondsLeft(customTimes[newMode] * 60); // Uses dynamic custom selection
         setShowPaywall(false);
+    };
+
+    // Helper to handle manual custom minutes input edits
+    const handleCustomTimeChange = (type: TimerMode, minutesStr: string) => {
+        const minutes = parseInt(minutesStr, 10);
+        if (isNaN(minutes) || minutes < 1) return;
+
+        // Constrain custom timing between 1 minute and 24 hours (1440 minutes)
+        const constrainedMinutes = Math.min(1440, minutes);
+
+        setCustomTimes((prev) => {
+            const updated = { ...prev, [type]: constrainedMinutes };
+            // If the modified mode is the currently active timer and it is not running, update secondsLeft instantly
+            if (!isRunning && mode === type) {
+                setSecondsLeft(constrainedMinutes * 60);
+            }
+            return updated;
+        });
     };
 
     const handleTimerComplete = async () => {
         setIsRunning(false);
 
         if (mode === "focus") {
+            // Gated Free Tier restriction
             if (focusCount >= 2) {
                 setShowPaywall(true);
-                setSecondsLeft(MODE_TIMES.focus);
+                setSecondsLeft(customTimes.focus * 60);
                 return;
             }
 
@@ -76,7 +99,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
             if (intervalRef.current) clearInterval(intervalRef.current);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isRunning, mode]);
+    }, [isRunning, mode, customTimes]); // Dynamic update hook triggered when customTimes is edited
 
     const toggleTimer = () => {
         if (mode === "focus" && focusCount >= 2) {
@@ -88,7 +111,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
 
     const resetTimer = () => {
         setIsRunning(false);
-        setSecondsLeft(MODE_TIMES[mode]);
+        setSecondsLeft(customTimes[mode] * 60);
     };
 
     const formatTime = (secs: number) => {
@@ -97,12 +120,13 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
         return `${String(mins).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
     };
 
-    const maxTime = MODE_TIMES[mode];
+    const maxTime = customTimes[mode] * 60;
     const progressPercentage = ((maxTime - secondsLeft) / maxTime) * 100;
     const strokeDashoffset = 283 - (283 * progressPercentage) / 100;
 
     return (
         <div className="space-y-8 max-w-xl mx-auto text-center">
+            {/* Header */}
             <div>
                 <h2 className="text-3xl font-bold tracking-tight">
                     Focus State
@@ -113,8 +137,10 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                 </p>
             </div>
 
+            {/* Main Focus Card */}
             <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none p-8 rounded-2xl">
                 <CardContent className="space-y-8 pt-6">
+                    {/* Mode Selector Tabs */}
                     <div className="flex justify-center gap-2 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
                         <button
                             onClick={() => switchMode("focus")}
@@ -123,7 +149,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                                     ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
                                     : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
                             }`}>
-                            Focus (25m)
+                            Focus ({customTimes.focus}m)
                         </button>
                         <button
                             onClick={() => switchMode("shortBreak")}
@@ -145,6 +171,68 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                         </button>
                     </div>
 
+                    {/* 2. MINIMALIST CUSTOM TIMING EDITOR */}
+                    <div className="grid grid-cols-3 gap-3 pt-2">
+                        <div className="space-y-1">
+                            <span className="block text-[10px] uppercase font-bold text-stone-400 dark:text-stone-500">
+                                Focus Mins
+                            </span>
+                            <Input
+                                type="number"
+                                min="1"
+                                max="1440"
+                                value={customTimes.focus}
+                                disabled={isRunning}
+                                onChange={(e) =>
+                                    handleCustomTimeChange(
+                                        "focus",
+                                        e.target.value,
+                                    )
+                                }
+                                className="h-8 text-center text-xs bg-stone-50 dark:bg-stone-950 shadow-none border-none focus-visible:ring-1 focus-visible:ring-stone-300 dark:focus-visible:ring-stone-800"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <span className="block text-[10px] uppercase font-bold text-stone-400 dark:text-stone-500">
+                                Short Break
+                            </span>
+                            <Input
+                                type="number"
+                                min="1"
+                                max="1440"
+                                value={customTimes.shortBreak}
+                                disabled={isRunning}
+                                onChange={(e) =>
+                                    handleCustomTimeChange(
+                                        "shortBreak",
+                                        e.target.value,
+                                    )
+                                }
+                                className="h-8 text-center text-xs bg-stone-50 dark:bg-stone-950 shadow-none border-none focus-visible:ring-1 focus-visible:ring-stone-300 dark:focus-visible:ring-stone-800"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <span className="block text-[10px] uppercase font-bold text-stone-400 dark:text-stone-500">
+                                Long Break
+                            </span>
+                            <Input
+                                type="number"
+                                min="1"
+                                max="1440"
+                                value={customTimes.longBreak}
+                                disabled={isRunning}
+                                onChange={(e) =>
+                                    handleCustomTimeChange(
+                                        "longBreak",
+                                        e.target.value,
+                                    )
+                                }
+                                className="h-8 text-center text-xs bg-stone-50 dark:bg-stone-950 shadow-none border-none focus-visible:ring-1 focus-visible:ring-stone-300 dark:focus-visible:ring-stone-800"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Circular Countdown Progress Ring */}
                     <div className="relative w-64 h-64 mx-auto flex items-center justify-center">
                         <svg
                             className="w-full h-full transform -rotate-90"
@@ -174,6 +262,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                         </div>
                     </div>
 
+                    {/* Controls */}
                     <div className="flex justify-center gap-4">
                         <Button
                             onClick={toggleTimer}
@@ -195,6 +284,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                         </Button>
                     </div>
 
+                    {/* Gated Sessions Limit Info */}
                     <div className="text-xs text-stone-500 pt-2 border-t border-stone-100 dark:border-stone-800">
                         Today&apos;s completed focus blocks:{" "}
                         <span className="font-bold text-stone-900 dark:text-stone-100">
@@ -204,6 +294,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                 </CardContent>
             </Card>
 
+            {/* Paywall Banner Gating */}
             {showPaywall && (
                 <Card className="border-rose-200 bg-rose-50/50 dark:border-rose-950/40 dark:bg-rose-950/10 p-6 text-center rounded-2xl shadow-none animate-pulse">
                     <div className="flex justify-center mb-3 text-rose-500">
