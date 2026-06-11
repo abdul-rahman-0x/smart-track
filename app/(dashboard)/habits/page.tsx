@@ -1,135 +1,72 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { habits } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { createHabit, completeHabit } from "./actions";
-import { Flame, Check, Plus } from "lucide-react";
+import { habits, habitCompletions } from "@/db/schema";
+import { eq, and, gte, lte } from "drizzle-orm";
+import { seedDefaultHabits } from "./actions";
+import { HabitsClient } from "./habits-client";
 
-export default async function HabitsPage() {
+interface PageProps {
+    searchParams: Promise<{ date?: string }>;
+}
+
+export default async function HabitsPage({ searchParams }: PageProps) {
     const session = await auth();
     const userId = session?.user?.id;
 
-    if (!userId) return null;
+    if (!userId) redirect("/login");
 
-    // Load habits from Postgres
-    const userHabits = await db.query.habits.findMany({
-        where: eq(habits.userId, userId),
-        orderBy: [desc(habits.createdAt)],
-    });
+    const resolvedParams = await searchParams;
+    const rawDate = resolvedParams.date;
 
-    // Action helper for new habits
-    async function handleAddHabit(formData: FormData) {
-        "use server";
-        const name = formData.get("name") as string;
-        if (!name || name.trim() === "") return;
-        await createHabit(name);
+    let selectedDate = new Date();
+    if (rawDate) {
+        const parsed = new Date(rawDate);
+        if (!isNaN(parsed.getTime())) {
+            selectedDate = parsed;
+        }
     }
 
-    // Helper to check if a habit was completed today
-    const isCompletedToday = (lastCompleted: Date | null) => {
-        if (!lastCompleted) return false;
-        const today = new Date();
-        const lastDate = new Date(lastCompleted);
-        return (
-            today.getDate() === lastDate.getDate() &&
-            today.getMonth() === lastDate.getMonth() &&
-            today.getFullYear() === lastDate.getFullYear()
+    // Calculate week limits
+    const currentDayOfWeek = selectedDate.getDay();
+    const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+    const monday = new Date(selectedDate);
+    monday.setDate(selectedDate.getDate() + distanceToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    // Check if habits are empty. If they are, seed the 4 default templates
+    let userHabits = await db.query.habits.findMany({
+        where: eq(habits.userId, userId),
+    });
+
+    if (userHabits.length === 0) {
+        await seedDefaultHabits(userId);
+        userHabits = await db.query.habits.findMany({
+            where: eq(habits.userId, userId),
+        });
+    }
+
+    // Get active completions for the week
+    const userCompletions = await db
+        .select()
+        .from(habitCompletions)
+        .where(
+            and(
+                gte(habitCompletions.completedAt, monday),
+                lte(habitCompletions.completedAt, sunday),
+            ),
         );
-    };
 
     return (
-        <div className="space-y-8 max-w-4xl mx-auto">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">
-                    Habit Tracker
-                </h2>
-                <p className="text-stone-500 dark:text-stone-400">
-                    Build consistency. Maintain daily streaks for study blocks
-                    and wellness.
-                </p>
-            </div>
-
-            <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-                <CardContent className="pt-6">
-                    <form action={handleAddHabit} className="flex gap-3">
-                        <Input
-                            name="name"
-                            placeholder="Enter a new habit (e.g., Code for 1 hour, Read 20 pages...)"
-                            required
-                            className="flex-1 bg-stone-50 dark:bg-stone-950"
-                        />
-                        <Button type="submit" className="flex gap-2">
-                            <Plus className="w-4 h-4" /> Add Habit
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-
-            <div className="grid gap-4">
-                {userHabits.length > 0 ? (
-                    userHabits.map((habit) => {
-                        const completedToday = isCompletedToday(
-                            habit.lastCompleted,
-                        );
-
-                        return (
-                            <Card
-                                key={habit.id}
-                                className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-                                <CardContent className="flex items-center justify-between p-6">
-                                    <div className="space-y-1">
-                                        <h3 className="font-semibold text-lg">
-                                            {habit.name}
-                                        </h3>
-                                        <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                                            <Flame className="w-4 h-4 text-orange-500" />
-                                            <span>
-                                                {habit.streak} day streak
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <form
-                                        action={async () => {
-                                            "use server";
-                                            await completeHabit(habit.id);
-                                        }}>
-                                        <Button
-                                            type="submit"
-                                            disabled={completedToday}
-                                            variant={
-                                                completedToday
-                                                    ? "secondary"
-                                                    : "default"
-                                            }
-                                            className="flex gap-2">
-                                            {completedToday ? (
-                                                <>
-                                                    <Check className="w-4 h-4 text-emerald-500" />
-                                                    Completed Today
-                                                </>
-                                            ) : (
-                                                "Mark Complete"
-                                            )}
-                                        </Button>
-                                    </form>
-                                </CardContent>
-                            </Card>
-                        );
-                    })
-                ) : (
-                    <div className="text-center py-12 border border-dashed border-stone-200 rounded-xl dark:border-stone-800">
-                        <p className="text-stone-400">
-                            No habits added yet. Type one above to start
-                            tracking!
-                        </p>
-                    </div>
-                )}
-            </div>
-        </div>
+        <HabitsClient
+            selectedDateStr={selectedDate.toISOString().split("T")[0]}
+            initialHabits={userHabits}
+            initialCompletions={userCompletions}
+        />
     );
 }
