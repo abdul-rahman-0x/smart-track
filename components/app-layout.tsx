@@ -9,6 +9,7 @@ import {
     Sparkles,
     Timer,
     LogOut,
+    CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +36,7 @@ const navItems = [
     { label: "Habits", href: "/habits", icon: ListTodo },
     { label: "Exams", href: "/exams", icon: GraduationCap },
     { label: "Focus", href: "/focus", icon: Timer },
+    { label: "Billing", href: "/billing", icon: CreditCard },
 ] as const;
 
 type NavLinksProps = {

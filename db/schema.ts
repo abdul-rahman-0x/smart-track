@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
-// --- AUTH.JS V5 SCHEMAS ---
+// --- AUTH.JS V5 STANDARD TABLES ---
 export const users = pgTable("user", {
     id: text("id")
         .primaryKey()
@@ -54,31 +54,33 @@ export const sessions = pgTable("session", {
     expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
-// --- STRIPE BILLING SCHEMAS ---
-export const subscriptions = pgTable("subscription", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: text("userId")
+// --- STRIPE BILLING & SUBSCRIPTION SCHEMA ---
+export const subscriptions = pgTable("subscriptions", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" })
         .unique(),
     stripeCustomerId: text("stripe_customer_id").notNull().unique(),
     stripeSubscriptionId: text("stripe_subscription_id").unique(),
     stripePriceId: text("stripe_price_id"),
-    status: text("status").notNull(), // 'active', 'canceled' etc.
-    currentPeriodEnd: timestamp("current_period_end", { mode: "date" }),
+    status: text("status").notNull(), // 'active' | 'trialing' | 'canceled' | 'incomplete'
+    currentPeriodEnd: timestamp("current_period_end", {
+        mode: "date",
+    }).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// --- SMART-TRACK CONTENT SCHEMAS ---
+// --- SMART-TRACK CONTENT TABLES ---
 export const habits = pgTable("habit", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    category: text("category").default("vitality").notNull(), // "intellect" | "vitality" | "mindfulness"
     streak: integer("streak").default(0).notNull(),
+    lastCompleted: timestamp("last_completed", { mode: "date" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -90,18 +92,6 @@ export const habitCompletions = pgTable("habit_completion", {
     completedAt: timestamp("completed_at", { mode: "date" }).notNull(),
 });
 
-export const tasks = pgTable("task", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: text("userId")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    completed: boolean("completed").default(false).notNull(),
-    dueDate: timestamp("due_date", { mode: "date" }),
-    priority: text("priority").default("medium").notNull(), // 'low' | 'medium' | 'high'
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export const exams = pgTable("exam", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
@@ -111,4 +101,31 @@ export const exams = pgTable("exam", {
     date: timestamp("date", { mode: "date" }).notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const tasks = pgTable("task", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("userId")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    completed: boolean("completed").default(false).notNull(),
+    dueDate: timestamp("due_date", { mode: "date" }),
+    priority: text("priority").default("medium").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    // 1. RELATIONAL UPDATE: Nullifies relationship on exam deletion to protect standalone planner tasks
+    examId: uuid("exam_id").references(() => exams.id, {
+        onDelete: "set null",
+    }),
+});
+
+export const syllabusItems = pgTable("syllabus_item", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    completed: boolean("completed").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    // 2. RELATIONAL UPDATE: Cascade deletes related study chapters when an exam is deleted
+    examId: uuid("exam_id")
+        .notNull()
+        .references(() => exams.id, { onDelete: "cascade" }),
 });
