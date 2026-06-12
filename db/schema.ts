@@ -64,7 +64,7 @@ export const subscriptions = pgTable("subscriptions", {
     stripeCustomerId: text("stripe_customer_id").notNull().unique(),
     stripeSubscriptionId: text("stripe_subscription_id").unique(),
     stripePriceId: text("stripe_price_id"),
-    status: text("status").notNull(), // 'active' | 'trialing' | 'canceled' | 'incomplete'
+    status: text("status").notNull(),
     currentPeriodEnd: timestamp("current_period_end", {
         mode: "date",
     }).notNull(),
@@ -72,15 +72,16 @@ export const subscriptions = pgTable("subscriptions", {
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// --- SMART-TRACK CONTENT TABLES ---
+// --- UPGRADED SMART-TRACK HABITS SCHEMAS ---
 export const habits = pgTable("habit", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    // FIXED: Explicitly added the missing category column inside your schema
+    category: text("category").default("vitality").notNull(),
     streak: integer("streak").default(0).notNull(),
-    lastCompleted: timestamp("last_completed", { mode: "date" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -113,7 +114,6 @@ export const tasks = pgTable("task", {
     dueDate: timestamp("due_date", { mode: "date" }),
     priority: text("priority").default("medium").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    // 1. RELATIONAL UPDATE: Nullifies relationship on exam deletion to protect standalone planner tasks
     examId: uuid("exam_id").references(() => exams.id, {
         onDelete: "set null",
     }),
@@ -124,7 +124,6 @@ export const syllabusItems = pgTable("syllabus_item", {
     title: text("title").notNull(),
     completed: boolean("completed").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    // 2. RELATIONAL UPDATE: Cascade deletes related study chapters when an exam is deleted
     examId: uuid("exam_id")
         .notNull()
         .references(() => exams.id, { onDelete: "cascade" }),
