@@ -7,8 +7,9 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_API_KEY!);
-
+const stripe = new Stripe(
+    process.env.STRIPE_API_KEY || "sk_test_dummy_key_for_build",
+);
 // Action 1: Create a Stripe Checkout Session
 export async function createCheckoutSession(priceId: string) {
     const session = await auth();

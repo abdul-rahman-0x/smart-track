@@ -5,8 +5,9 @@ import { subscriptions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_API_KEY!);
-
+const stripe = new Stripe(
+    process.env.STRIPE_API_KEY || "sk_test_dummy_key_for_build",
+);
 // Strictly defined payload interface to manage both sessions and subscription returns cleanly
 interface StripePayload {
     id: string;
