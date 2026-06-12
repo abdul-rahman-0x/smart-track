@@ -1,7 +1,5 @@
 import React from "react";
-import Link from "next/id";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
 
 export default function Hero() {
     return (
