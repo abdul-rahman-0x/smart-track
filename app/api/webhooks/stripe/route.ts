@@ -5,9 +5,24 @@ import { subscriptions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
-    apiVersion: "2025-01-01" as Stripe.StripeConfig["apiVersion"],
-});
+const stripe = new Stripe(process.env.STRIPE_API_KEY!);
+
+// Strictly defined payload interface to manage both sessions and subscription returns cleanly
+interface StripePayload {
+    id: string;
+    customer?: string | null;
+    subscription?: string | null;
+    client_reference_id?: string | null;
+    status?: string;
+    current_period_end?: number;
+    items?: {
+        data: Array<{
+            price: {
+                id: string;
+            };
+        }>;
+    };
+}
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -22,7 +37,6 @@ export async function POST(req: Request) {
             process.env.STRIPE_WEBHOOK_SECRET!,
         );
     } catch (err: unknown) {
-        // FIXED: Replaced catch block 'any' with a robust TypeScript type-guard
         const errorMessage =
             err instanceof Error ? err.message : "Unknown webhook error";
         return new NextResponse(`Webhook Error: ${errorMessage}`, {
@@ -30,83 +44,83 @@ export async function POST(req: Request) {
         });
     }
 
-    const session = event.data.object as
-        | Stripe.Checkout.Session
-        | Stripe.Subscription;
+    // 1. Cast the incoming event payload to our safe local interface
+    const data = event.data.object as unknown as StripePayload;
 
     switch (event.type) {
         case "checkout.session.completed": {
-            const checkoutSession = session as Stripe.Checkout.Session;
-            if (!checkoutSession.client_reference_id) break;
+            if (!data.client_reference_id) break;
 
-            const subscriptionDetails = await stripe.subscriptions.retrieve(
-                checkoutSession.subscription as string,
-            );
+            // 2. Cast retrieved subscription response to our local payload interface
+            const subscriptionDetails = (await stripe.subscriptions.retrieve(
+                data.subscription as string,
+            )) as unknown as StripePayload;
+
+            const periodEndEpoch = subscriptionDetails.current_period_end;
+
+            if (!periodEndEpoch || !subscriptionDetails.items) break;
 
             await db.insert(subscriptions).values({
-                userId: checkoutSession.client_reference_id,
-                stripeCustomerId: checkoutSession.customer as string,
-                stripeSubscriptionId: checkoutSession.subscription as string,
+                userId: data.client_reference_id,
+                stripeCustomerId: data.customer as string,
+                stripeSubscriptionId: data.subscription as string,
                 stripePriceId: subscriptionDetails.items.data[0].price.id,
-                status: subscriptionDetails.status,
-                currentPeriodEnd: new Date(
-                    subscriptionDetails.current_period_end * 1000,
-                ),
+                status: subscriptionDetails.status || "active",
+                currentPeriodEnd: new Date(periodEndEpoch * 1000),
             });
             break;
         }
 
         case "invoice.payment_succeeded": {
-            const invoice = event.data.object as Stripe.Invoice;
-            if (!invoice.subscription) break;
+            if (!data.subscription) break;
 
-            const subscriptionDetails = await stripe.subscriptions.retrieve(
-                invoice.subscription as string,
-            );
+            // 3. Cast retrieved subscription response to our local payload interface
+            const subscriptionDetails = (await stripe.subscriptions.retrieve(
+                data.subscription,
+            )) as unknown as StripePayload;
+
+            const periodEndEpoch = subscriptionDetails.current_period_end;
+
+            if (!periodEndEpoch) break;
 
             await db
                 .update(subscriptions)
                 .set({
-                    status: subscriptionDetails.status,
-                    currentPeriodEnd: new Date(
-                        subscriptionDetails.current_period_end * 1000,
-                    ),
+                    status: subscriptionDetails.status || "active",
+                    currentPeriodEnd: new Date(periodEndEpoch * 1000),
                     updatedAt: new Date(),
                 })
                 .where(
-                    eq(
-                        subscriptions.stripeSubscriptionId,
-                        invoice.subscription as string,
-                    ),
+                    eq(subscriptions.stripeSubscriptionId, data.subscription),
                 );
             break;
         }
 
         case "customer.subscription.updated": {
-            const sub = session as Stripe.Subscription;
+            const periodEndEpoch = data.current_period_end;
+
+            if (!periodEndEpoch || !data.items) break;
 
             await db
                 .update(subscriptions)
                 .set({
-                    status: sub.status,
-                    stripePriceId: sub.items.data[0].price.id,
-                    currentPeriodEnd: new Date(sub.current_period_end * 1000),
+                    status: data.status || "active",
+                    stripePriceId: data.items.data[0].price.id,
+                    currentPeriodEnd: new Date(periodEndEpoch * 1000),
                     updatedAt: new Date(),
                 })
-                .where(eq(subscriptions.stripeSubscriptionId, sub.id));
+                .where(eq(subscriptions.stripeSubscriptionId, data.id));
             break;
         }
 
         case "customer.subscription.deleted": {
-            const sub = session as Stripe.Subscription;
-
             await db
                 .update(subscriptions)
                 .set({
                     status: "canceled",
                     updatedAt: new Date(),
                 })
-                .where(eq(subscriptions.stripeSubscriptionId, sub.id));
+                .where(eq(subscriptions.stripeSubscriptionId, data.id));
             break;
         }
     }
