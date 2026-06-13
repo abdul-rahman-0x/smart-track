@@ -7,10 +7,9 @@ import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 
 const DEFAULT_HABITS = [
-    "Drink Water (8 cups)",
-    "Read 20 pages",
-    "Study 2 Hours",
-    "Stretch / Meditate",
+    "90 Min Uninterrupted Deep Work Block",
+    "Morning Mindfulness & Hydration",
+    "Read 15 Pages (Technical or Philosophy)",
 ];
 
 // Helper: Seed default habits for new users
@@ -24,7 +23,6 @@ export async function seedDefaultHabits(userId: string) {
         }),
     );
     await Promise.all(insertPromises);
-    revalidatePath("/habits");
 }
 
 // Action 1: Create a habit
