@@ -11,12 +11,13 @@ export default function Hero() {
                     Designed for Focus
                 </span>
 
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight max-w-3xl mx-auto">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl tracking-tight leading-tight max-w-3xl mx-auto">
                     Reclaim Your Study Life <br />
                     <span className="text-stone-600 dark:text-stone-400">
                         Without The Noise.
                     </span>
                 </h1>
+
                 <p className="text-stone-500 dark:text-stone-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
                     Smarter personal planning software that helps you build
                     daily consistency and stay organized — automatically.
