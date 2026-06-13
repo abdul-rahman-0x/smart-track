@@ -19,6 +19,11 @@ export default function LandingPage() {
                 <FAQ />
             </main>
             <Footer />
+            {/* PREMIUM FIXED BOTTOM BLUR GRADIENT OVERLAY */}
+            <div
+                className="pointer-events-none fixed inset-x-0 bottom-0 z-50 h-[60px] select-none bg-linear-to-t from-stone-50 dark:from-stone-950 to-transparent opacity-100 backdrop-blur-[5px] mask-[linear-gradient(to_top,black_30%,transparent)]"
+                aria-hidden="true"
+            />
         </div>
     );
 }
