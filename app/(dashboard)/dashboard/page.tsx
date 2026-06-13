@@ -39,14 +39,14 @@ export default async function DashboardPage() {
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // 1. Fetch Subscription Status (PRO vs FREE)
+    // --- 1. Fetch Subscription Status (PRO vs FREE) ---
     const userSub = await db.query.subscriptions.findFirst({
         where: eq(subscriptions.userId, userId),
     });
     const isPro =
         userSub?.status === "active" || userSub?.status === "trialing";
 
-    // 2. Fetch Closest Exam Milestone (Next 3 upcoming exams)
+    // --- 2. Fetch Next Exam Milestone (Up to 3 upcoming exams) ---
     const upcomingExamsList = await db.query.exams.findMany({
         where: and(eq(exams.userId, userId), gte(exams.date, today)),
         orderBy: [asc(exams.date)],
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
         daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // 3. Fetch Syllabus Progress
+    // --- 3. Fetch Syllabus Progress ---
     const allSyllabusItems = await db
         .select()
         .from(syllabusItems)
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
             ? Math.round((completedSyllabus / totalSyllabus) * 100)
             : 0;
 
-    // 4. Calculate active week's daily completed focus sessions
+    // --- 4. Calculate active week's daily completed focus sessions ---
     const currentDay = today.getDay();
     const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
     const monday = new Date(today);
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
 
     const focusHours = (totalWeekFocusMinutes / 60).toFixed(1);
 
-    // 5. Fetch all tasks for today
+    // --- 5. Fetch Today's Tasks & Checklist ---
     const allTodayTasks = await db
         .select()
         .from(tasks)
@@ -148,14 +148,13 @@ export default async function DashboardPage() {
             ? Math.round((completedTodayTasks / totalTodayTasks) * 100)
             : 0;
 
-    // 6. Fetch habits sorted by highest streak
+    // --- 6. Fetch Habits & Completes today ---
     const userHabits = await db.query.habits.findMany({
         where: eq(habits.userId, userId),
         orderBy: [desc(habits.streak)],
         limit: 4,
     });
 
-    // Query relational completions table to find out how many habits were checked off today
     const todayCompletions = await db
         .select()
         .from(habitCompletions)
@@ -176,7 +175,7 @@ export default async function DashboardPage() {
             ? Math.round((completedHabitsToday / totalHabits) * 100)
             : 0;
 
-    // Calculate circular SVG progress offset for outer progress rings
+    // --- 7. Calculate Concentric Progress Rings (SVG Circle Parameters) ---
     const outerCirc = 226;
     const outerOffset =
         outerCirc - (outerCirc * habitsProgressPercentage) / 100;
@@ -188,7 +187,7 @@ export default async function DashboardPage() {
     const innerCirc = 125;
     const innerOffset = innerCirc - (innerCirc * syllabusProgress) / 100;
 
-    // Format Name
+    // Name formatting
     const nameParts = session?.user?.name?.split(" ");
     const displayName =
         nameParts && nameParts.length > 0
@@ -201,11 +200,11 @@ export default async function DashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-100 dark:border-stone-800 pb-6">
                 <div className="space-y-1">
                     <div className="flex items-center gap-3">
-                        <h2 className="text-3xl font-bold tracking-tight">
+                        <h2 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">
                             Welcome back, {displayName}
                         </h2>
                         {isPro ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm">
                                 <Sparkles className="w-3 h-3 fill-current" />
                                 PRO MEMBER
                             </span>
@@ -231,7 +230,7 @@ export default async function DashboardPage() {
             {/* --- LAYER 1: 3 BENTO METRICS CARDS --- */}
             <div className="grid gap-6 sm:grid-cols-3">
                 {/* Card 1: Focus State */}
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none">
+                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none hover:border-orange-500/30 transition-colors">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                             Focus State
@@ -239,7 +238,7 @@ export default async function DashboardPage() {
                         <Clock className="h-4 w-4 text-orange-500" />
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                             {focusHours} Hours Focused
                         </div>
                         <p className="text-[10px] text-stone-400 leading-tight">
@@ -251,7 +250,7 @@ export default async function DashboardPage() {
                 </Card>
 
                 {/* Card 2: Syllabus Progress */}
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none">
+                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none hover:border-emerald-500/30 transition-colors">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                             Syllabus Progress
@@ -259,7 +258,7 @@ export default async function DashboardPage() {
                         <BookOpen className="h-4 w-4 text-emerald-500" />
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-bold tracking-tight text-emerald-500 dark:text-emerald-400">
                             {syllabusProgress}% Completed
                         </div>
 
@@ -272,9 +271,9 @@ export default async function DashboardPage() {
                                 return (
                                     <div
                                         key={idx}
-                                        className={`flex-1 h-3 rounded-[1px] ${
+                                        className={`flex-1 h-3 rounded-[1px] transition-all duration-500 ${
                                             isActive
-                                                ? "bg-orange-500 dark:bg-orange-500"
+                                                ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                                                 : "bg-stone-100 dark:bg-stone-800"
                                         }`}
                                     />
@@ -285,7 +284,7 @@ export default async function DashboardPage() {
                 </Card>
 
                 {/* Card 3: Next Exam Countdown */}
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none">
+                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none hover:border-indigo-500/30 transition-colors">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                             Next Milestone
@@ -295,7 +294,7 @@ export default async function DashboardPage() {
                     <CardContent className="space-y-1">
                         {nextExam ? (
                             <div className="space-y-0.5">
-                                <div className="text-md font-bold truncate leading-tight">
+                                <div className="text-md font-bold truncate leading-tight text-stone-900 dark:text-stone-100">
                                     {nextExam.subject}
                                 </div>
                                 <p className="text-xs font-semibold text-rose-500">
@@ -318,7 +317,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* ==================== ROW 2: 1 WIDE ANALYTICS CARD WITH WORK ACTIVITY RINGS ==================== */}
-            <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none p-6 rounded-2xl">
+            <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none p-6 rounded-2xl">
                 <div className="grid gap-6 md:grid-cols-5 items-center">
                     {/* Left Columns (col-span-3): Radial Rings Explanation */}
                     <div className="md:col-span-3 space-y-4">
@@ -326,7 +325,7 @@ export default async function DashboardPage() {
                             <span className="block text-[10px] uppercase font-bold text-stone-400">
                                 Work Activity
                             </span>
-                            <h3 className="text-xl font-bold tracking-tight">
+                            <h3 className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">
                                 Active progression in one place
                             </h3>
                         </div>
@@ -385,7 +384,7 @@ export default async function DashboardPage() {
                                     cx="50"
                                     cy="50"
                                     r="36"
-                                    className="stroke-orange-500"
+                                    className="stroke-orange-500 transition-all duration-500"
                                     strokeWidth="6"
                                     fill="transparent"
                                     strokeDasharray={outerCirc}
@@ -406,7 +405,7 @@ export default async function DashboardPage() {
                                     cx="50"
                                     cy="50"
                                     r="28"
-                                    className="stroke-indigo-500"
+                                    className="stroke-indigo-500 transition-all duration-500"
                                     strokeWidth="6"
                                     fill="transparent"
                                     strokeDasharray={middleCirc}
@@ -414,7 +413,7 @@ export default async function DashboardPage() {
                                     strokeLinecap="round"
                                 />
 
-                                {/* 3. Inner Ring (Emerald) - Exams */}
+                                {/* 3. Inner Ring (Emerald) - Syllabus */}
                                 <circle
                                     cx="50"
                                     cy="50"
@@ -427,7 +426,7 @@ export default async function DashboardPage() {
                                     cx="50"
                                     cy="50"
                                     r="20"
-                                    className="stroke-emerald-500"
+                                    className="stroke-emerald-500 transition-all duration-500"
                                     strokeWidth="6"
                                     fill="transparent"
                                     strokeDasharray={innerCirc}
@@ -436,7 +435,7 @@ export default async function DashboardPage() {
                                 />
                             </svg>
                             <div className="absolute flex flex-col items-center text-stone-400">
-                                <Activity size={20} />
+                                <Activity size={20} className="text-zinc-400" />
                             </div>
                         </div>
                     </div>
@@ -446,7 +445,7 @@ export default async function DashboardPage() {
             {/* ==================== ROW 3: INTERACTIVE CHECKLISTS & ACTIVE EXAMS TIMELINE ==================== */}
             <div className="grid gap-6 md:grid-cols-3">
                 {/* Left Column (col-span-2): Today's Active Tasks Checklist */}
-                <Card className="md:col-span-2 border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none p-6 rounded-2xl">
+                <Card className="md:col-span-2 border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none p-6 rounded-2xl">
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2">
                             <ListTodo className="w-4 h-4 text-emerald-500" />
@@ -460,18 +459,24 @@ export default async function DashboardPage() {
                                 todayUserTasks.map((task) => (
                                     <div
                                         key={task.id}
-                                        className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                                        <CheckCircle2
-                                            className={`w-4 h-4 ${task.completed ? "text-emerald-500" : "text-stone-300 dark:text-stone-700"}`}
-                                        />
-                                        <span
-                                            className={`text-xs font-semibold ${task.completed ? "line-through text-stone-400" : ""}`}>
-                                            {task.title.startsWith("[")
-                                                ? task.title
-                                                      .split("]")[1]
-                                                      .trim()
-                                                : task.title}
-                                        </span>
+                                        className="flex items-center justify-between py-3 first:pt-0 last:pb-0 group">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle2
+                                                className={`w-4 h-4 transition-colors ${
+                                                    task.completed
+                                                        ? "text-emerald-500"
+                                                        : "text-stone-300 dark:text-stone-700 group-hover:text-stone-400"
+                                                }`}
+                                            />
+                                            <span
+                                                className={`text-xs font-semibold ${
+                                                    task.completed
+                                                        ? "line-through text-stone-400"
+                                                        : "text-stone-700 dark:text-stone-300"
+                                                }`}>
+                                                {task.title}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))
                             ) : (
@@ -496,7 +501,7 @@ export default async function DashboardPage() {
                 </Card>
 
                 {/* Right Column (col-span-1): Upcoming Exams Timeline */}
-                <Card className="md:col-span-1 border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none p-6 rounded-2xl">
+                <Card className="md:col-span-1 border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none p-6 rounded-2xl">
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2">
                             <GraduationCap className="w-4 h-4 text-indigo-500" />
@@ -519,7 +524,7 @@ export default async function DashboardPage() {
                                             key={exam.id}
                                             className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                                             <div className="min-w-0 pr-2">
-                                                <p className="text-xs font-bold truncate leading-tight">
+                                                <p className="text-xs font-bold truncate leading-tight text-stone-800 dark:text-stone-200">
                                                     {exam.subject}
                                                 </p>
                                                 <p className="text-[10px] text-stone-400 pt-0.5">
@@ -533,7 +538,11 @@ export default async function DashboardPage() {
                                                 </p>
                                             </div>
                                             <span
-                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${diff <= 3 ? "bg-rose-500/10 text-rose-500 border border-rose-500/20" : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700"}`}>
+                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                                    diff <= 5
+                                                        ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                                                        : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700"
+                                                }`}>
                                                 {diff < 0
                                                     ? "Done"
                                                     : diff === 0
