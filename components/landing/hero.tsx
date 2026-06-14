@@ -2,14 +2,13 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { SectionBadge } from "@/components/section-badge";
 
 export default function Hero() {
     return (
         <section className="relative max-w-5xl mx-auto px-4 pt-24 pb-12 text-center space-y-8">
             <div className="space-y-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                    Designed for Focus
-                </span>
+                <SectionBadge>Designed for Focus</SectionBadge>
 
                 <h1 className="text-4xl sm:text-5xl md:text-6xl tracking-tight leading-tight max-w-3xl mx-auto">
                     Reclaim Your Study Life <br />
