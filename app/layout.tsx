@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Serif } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
+const inter = Inter({
+    variable: "--font-inter",
     subsets: ["latin"],
+    display: "swap",
 });
 
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
+const ibmPlexSerif = IBM_Plex_Serif({
+    variable: "--font-ibm-plex-serif",
     subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
+    display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -18,6 +21,7 @@ export const metadata: Metadata = {
     description:
         "A simple and clean planner to manage your daily tasks, habits, and academic milestones.",
 };
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -27,7 +31,7 @@ export default function RootLayout({
         <html
             lang="en"
             suppressHydrationWarning
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+            className={`${inter.variable} ${ibmPlexSerif.variable} antialiased`}>
             <body>
                 <ThemeProvider
                     attribute="class"
