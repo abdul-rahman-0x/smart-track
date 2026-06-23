@@ -8,15 +8,14 @@ import Stripe from "stripe";
 const stripe = new Stripe(
     process.env.STRIPE_API_KEY || "sk_test_dummy_key_for_build",
 );
-// Strictly defined payload interface to manage both sessions and subscription returns cleanly
-interface StripePayload {
+
+// --- STRICT INTERFACES ---
+interface StripeSubscription {
     id: string;
-    customer?: string | null;
-    subscription?: string | null;
-    client_reference_id?: string | null;
-    status?: string;
-    current_period_end?: number;
-    items?: {
+    customer: string;
+    status: Stripe.Subscription.Status;
+    current_period_end: number;
+    items: {
         data: Array<{
             price: {
                 id: string;
@@ -25,9 +24,36 @@ interface StripePayload {
     };
 }
 
+interface StripeCheckoutSession {
+    id: string;
+    subscription: string | null;
+    customer: string | null;
+    metadata: {
+        userId?: string;
+    } | null;
+}
+
+interface StripeInvoice {
+    subscription: string | null;
+}
+
+// --- HELPER: SAFE DATE CONVERSION ---
+const toSafeDate = (unixTimestamp: number | undefined | null): Date => {
+    if (!unixTimestamp || isNaN(unixTimestamp)) {
+        console.error("❌ Invalid timestamp received:", unixTimestamp);
+        // Fallback to 30 days from now if Stripe fails to provide a date
+        return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    }
+    return new Date(unixTimestamp * 1000);
+};
+
 export async function POST(req: Request) {
     const body = await req.text();
-    const signature = (await headers()).get("Stripe-Signature") as string;
+    const signature = (await headers()).get("Stripe-Signature");
+
+    if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+        return new NextResponse("Security Config Missing", { status: 400 });
+    }
 
     let event: Stripe.Event;
 
@@ -35,96 +61,93 @@ export async function POST(req: Request) {
         event = stripe.webhooks.constructEvent(
             body,
             signature,
-            process.env.STRIPE_WEBHOOK_SECRET!,
+            process.env.STRIPE_WEBHOOK_SECRET,
         );
     } catch (err: unknown) {
-        const errorMessage =
-            err instanceof Error ? err.message : "Unknown webhook error";
-        return new NextResponse(`Webhook Error: ${errorMessage}`, {
-            status: 400,
-        });
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return new NextResponse(`Webhook Error: ${msg}`, { status: 400 });
     }
 
-    // 1. Cast the incoming event payload to our safe local interface
-    const data = event.data.object as unknown as StripePayload;
+    try {
+        // --- CASE 1: INITIAL PURCHASE ---
+        if (event.type === "checkout.session.completed") {
+            const session = event.data
+                .object as unknown as StripeCheckoutSession;
+            const userId = session.metadata?.userId;
+            const subscriptionId = session.subscription;
 
-    switch (event.type) {
-        case "checkout.session.completed": {
-            if (!data.client_reference_id) break;
-
-            // 2. Cast retrieved subscription response to our local payload interface
-            const subscriptionDetails = (await stripe.subscriptions.retrieve(
-                data.subscription as string,
-            )) as unknown as StripePayload;
-
-            const periodEndEpoch = subscriptionDetails.current_period_end;
-
-            if (!periodEndEpoch || !subscriptionDetails.items) break;
-
-            await db.insert(subscriptions).values({
-                userId: data.client_reference_id,
-                stripeCustomerId: data.customer as string,
-                stripeSubscriptionId: data.subscription as string,
-                stripePriceId: subscriptionDetails.items.data[0].price.id,
-                status: subscriptionDetails.status || "active",
-                currentPeriodEnd: new Date(periodEndEpoch * 1000),
-            });
-            break;
-        }
-
-        case "invoice.payment_succeeded": {
-            if (!data.subscription) break;
-
-            // 3. Cast retrieved subscription response to our local payload interface
-            const subscriptionDetails = (await stripe.subscriptions.retrieve(
-                data.subscription,
-            )) as unknown as StripePayload;
-
-            const periodEndEpoch = subscriptionDetails.current_period_end;
-
-            if (!periodEndEpoch) break;
-
-            await db
-                .update(subscriptions)
-                .set({
-                    status: subscriptionDetails.status || "active",
-                    currentPeriodEnd: new Date(periodEndEpoch * 1000),
-                    updatedAt: new Date(),
-                })
-                .where(
-                    eq(subscriptions.stripeSubscriptionId, data.subscription),
+            if (!userId || !subscriptionId) {
+                console.error(
+                    "❌ Webhook Error: Missing userId or subscriptionId",
                 );
-            break;
-        }
+                return new NextResponse(null, { status: 200 });
+            }
 
-        case "customer.subscription.updated": {
-            const periodEndEpoch = data.current_period_end;
+            // Fetch the subscription to get the period end and price ID
+            const subData = await stripe.subscriptions.retrieve(subscriptionId);
+            const subscription = subData as unknown as StripeSubscription;
 
-            if (!periodEndEpoch || !data.items) break;
+            const expiryDate = toSafeDate(subscription.current_period_end);
+            console.log(
+                `⏳ Expiry calculated for ${userId}:`,
+                expiryDate.toISOString(),
+            );
 
             await db
-                .update(subscriptions)
-                .set({
-                    status: data.status || "active",
-                    stripePriceId: data.items.data[0].price.id,
-                    currentPeriodEnd: new Date(periodEndEpoch * 1000),
-                    updatedAt: new Date(),
+                .insert(subscriptions)
+                .values({
+                    userId: userId,
+                    stripeCustomerId: subscription.customer,
+                    stripeSubscriptionId: subscription.id,
+                    stripePriceId: subscription.items.data[0].price.id,
+                    status: subscription.status,
+                    currentPeriodEnd: expiryDate,
                 })
-                .where(eq(subscriptions.stripeSubscriptionId, data.id));
-            break;
+                .onConflictDoUpdate({
+                    target: subscriptions.userId,
+                    set: {
+                        stripeSubscriptionId: subscription.id,
+                        stripePriceId: subscription.items.data[0].price.id,
+                        status: subscription.status,
+                        currentPeriodEnd: expiryDate,
+                        updatedAt: new Date(),
+                    },
+                });
+
+            console.log(`✅ Neon DB Synced for user: ${userId}`);
         }
 
-        case "customer.subscription.deleted": {
-            await db
-                .update(subscriptions)
-                .set({
-                    status: "canceled",
-                    updatedAt: new Date(),
-                })
-                .where(eq(subscriptions.stripeSubscriptionId, data.id));
-            break;
+        // --- CASE 2: SUCCESSFUL RENEWAL ---
+        if (event.type === "invoice.payment_succeeded") {
+            const invoice = event.data.object as unknown as StripeInvoice;
+            const subscriptionId = invoice.subscription;
+
+            if (subscriptionId) {
+                const subData =
+                    await stripe.subscriptions.retrieve(subscriptionId);
+                const subscription = subData as unknown as StripeSubscription;
+                const expiryDate = toSafeDate(subscription.current_period_end);
+
+                await db
+                    .update(subscriptions)
+                    .set({
+                        status: subscription.status,
+                        currentPeriodEnd: expiryDate,
+                        updatedAt: new Date(),
+                    })
+                    .where(
+                        eq(subscriptions.stripeSubscriptionId, subscriptionId),
+                    );
+
+                console.log(
+                    `💳 Invoice Paid. New Expiry: ${expiryDate.toISOString()}`,
+                );
+            }
         }
+
+        return new NextResponse(null, { status: 200 });
+    } catch (error) {
+        console.error("❌ WEBHOOK CRITICAL FAILURE:", error);
+        return new NextResponse("Internal Server Error", { status: 500 });
     }
-
-    return new NextResponse(null, { status: 200 });
 }
