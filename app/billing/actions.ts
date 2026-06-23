@@ -27,19 +27,11 @@ export async function createCheckoutSession(priceId: string) {
         where: eq(subscriptions.userId, userId),
     });
 
-    // 3. Logic: If they are ALREADY ACTIVE, don't let them buy again.
-    // Instead, send them to the Billing Portal to manage/upgrade their plan.
-    if (
-        existingSub?.stripeSubscriptionId &&
-        existingSub.stripePriceId === priceId
-    ) {
-        // They are trying to buy what they already have
-        return redirect("/billing/manage"); // Or your portal action
-    }
-
-    // 4. Logic: Prepare Stripe Metadata
+    // 3. Logic: Prepare Stripe Metadata
     // We reuse the customerId if it exists to prevent duplicate Stripe customers
     const customerId = existingSub?.stripeCustomerId;
+    // 4. Logic: Create a Stripe Checkout Session
+    let url: string | null = null;
 
     try {
         const checkoutSession = await stripe.checkout.sessions.create({
@@ -56,16 +48,13 @@ export async function createCheckoutSession(priceId: string) {
                 userId: userId, // Very important for the Webhook to link the payment to the user
             },
         });
-
-        if (!checkoutSession.url) {
-            throw new Error("Failed to create stripe checkout session");
-        }
-
-        redirect(checkoutSession.url);
+        url = checkoutSession.url;
     } catch (error) {
-        console.error("[STRIPE_ERROR]:", error);
+        console.error("[STRIPE_SESSION_ERROR]:", error);
         throw error;
     }
+    // 5. Redirect the user to the Stripe Checkout page
+    if (url) redirect(url);
 }
 
 export async function createPortalSession() {
