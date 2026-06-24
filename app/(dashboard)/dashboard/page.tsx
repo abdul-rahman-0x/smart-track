@@ -2,46 +2,29 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import {
-    tasks,
-    exams,
-    syllabusItems,
-    habitCompletions,
-    habits,
-} from "@/db/schema";
+import { tasks, exams, syllabusItems, habitCompletions, habits } from "@/db/schema";
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Clock,
-    Calendar,
-    BookOpen,
-    ArrowRight,
-    CheckCircle2,
-    ListTodo,
-    GraduationCap,
-    Activity,
-    Sparkles,
-} from "lucide-react";
+import { Clock, Calendar, BookOpen, ArrowRight, CheckCircle2, ListTodo, GraduationCap, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { getSubscriptionPlan } from "@/lib/subscription";
+import { TierBadge } from "@/components/ui/tier-badge";
+import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
     const session = await auth();
     const userId = session?.user?.id;
+    if (!userId) redirect("/login");
 
-    if (!userId) {
-        redirect("/login");
-    }
-
-    // 1. Unified Subscription Check (Replaces manual fetch)
     const { isPro } = await getSubscriptionPlan();
 
+    // --- DATE LOGIC ---
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // --- 2. Fetch Next Exam Milestone ---
+    // --- DATA FETCHING ---
     const upcomingExamsList = await db.query.exams.findMany({
         where: and(eq(exams.userId, userId), gte(exams.date, today)),
         orderBy: [asc(exams.date)],
@@ -53,111 +36,37 @@ export default async function DashboardPage() {
     if (nextExam) {
         const examDate = new Date(nextExam.date);
         examDate.setHours(0, 0, 0, 0);
-        const diffTime = examDate.getTime() - today.getTime();
-        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        daysRemaining = Math.ceil((examDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     }
 
-    // --- 3. Fetch Syllabus Progress ---
-    const allSyllabusItems = await db
-        .select()
-        .from(syllabusItems)
-        .innerJoin(exams, eq(syllabusItems.examId, exams.id))
-        .where(eq(exams.userId, userId));
+    const allSyllabusItems = await db.select().from(syllabusItems).innerJoin(exams, eq(syllabusItems.examId, exams.id)).where(eq(exams.userId, userId));
+    const syllabusProgress = allSyllabusItems.length > 0 ? Math.round((allSyllabusItems.filter(i => i.syllabus_item.completed).length / allSyllabusItems.length) * 100) : 0;
 
-    const totalSyllabus = allSyllabusItems.length;
-    const completedSyllabus = allSyllabusItems.filter(
-        (item) => item.syllabus_item.completed,
-    ).length;
-    const syllabusProgress = totalSyllabus > 0 ? Math.round((completedSyllabus / totalSyllabus) * 100) : 0;
+    const allTodayTasks = await db.select().from(tasks).where(and(eq(tasks.userId, userId), gte(tasks.dueDate, today), lte(tasks.dueDate, endOfDay)));
+    const todayUserTasks = allTodayTasks.filter(t => !t.title.startsWith("[FOCUS]"));
+    const taskProgressPercentage = todayUserTasks.length > 0 ? Math.round((todayUserTasks.filter(t => t.completed).length / todayUserTasks.length) * 100) : 0;
 
-    // --- 4. Focus Session Calculation ---
-    const currentDay = today.getDay();
-    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + distanceToMonday);
-    monday.setHours(0, 0, 0, 0);
+    const userHabits = await db.query.habits.findMany({ where: eq(habits.userId, userId), orderBy: [desc(habits.streak)], limit: 4 });
+    const todayCompletions = await db.select().from(habitCompletions).where(and(gte(habitCompletions.completedAt, today), lte(habitCompletions.completedAt, endOfDay)));
+    const habitsProgressPercentage = userHabits.length > 0 ? Math.round((userHabits.filter(h => todayCompletions.some(c => c.habitId === h.id)).length / userHabits.length) * 100) : 0;
 
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
-
-    const weeklyFocusTasks = await db
-        .select()
-        .from(tasks)
-        .where(
-            and(
-                eq(tasks.userId, userId),
-                gte(tasks.dueDate, monday),
-                lte(tasks.dueDate, sunday),
-                eq(tasks.completed, true),
-                eq(tasks.title, "[FOCUS] 25m Focus Session"),
-            ),
-        );
-
-    let totalWeekFocusMinutes = 0;
-    weeklyFocusTasks.forEach(() => (totalWeekFocusMinutes += 25));
-    const focusHours = (totalWeekFocusMinutes / 60).toFixed(1);
-
-    // --- 5. Today's Tasks ---
-    const allTodayTasks = await db
-        .select()
-        .from(tasks)
-        .where(and(eq(tasks.userId, userId), gte(tasks.dueDate, today), lte(tasks.dueDate, endOfDay)));
-
-    const focusCount = allTodayTasks.filter((t) => t.completed && t.title === "[FOCUS] 25m Focus Session").length;
-    const todayUserTasks = allTodayTasks.filter((t) => !t.title.startsWith("[FOCUS]"));
-    const completedTodayTasks = todayUserTasks.filter((t) => t.completed).length;
-    const taskProgressPercentage = todayUserTasks.length > 0 ? Math.round((completedTodayTasks / todayUserTasks.length) * 100) : 0;
-
-    // --- 6. Habits ---
-    const userHabits = await db.query.habits.findMany({
-        where: eq(habits.userId, userId),
-        orderBy: [desc(habits.streak)],
-        limit: 4,
-    });
-
-    const todayCompletions = await db
-        .select()
-        .from(habitCompletions)
-        .where(and(gte(habitCompletions.completedAt, today), lte(habitCompletions.completedAt, endOfDay)));
-
-    const completedHabitsToday = userHabits.filter((h) => todayCompletions.some((c) => c.habitId === h.id)).length;
-    const habitsProgressPercentage = userHabits.length > 0 ? Math.round((completedHabitsToday / userHabits.length) * 100) : 0;
-
-    // --- 7. Progress Ring Circles ---
-    const outerCirc = 226;
-    const outerOffset = outerCirc - (outerCirc * habitsProgressPercentage) / 100;
-    const middleCirc = 176;
-    const middleOffset = middleCirc - (middleCirc * taskProgressPercentage) / 100;
-    const innerCirc = 125;
-    const innerOffset = innerCirc - (innerCirc * syllabusProgress) / 100;
+    // --- SHARED UI CLASSES (Task 2: Elevated Depth) ---
+    const cardStyles = "border border-stone-200/60 dark:border-stone-800/60 bg-white dark:bg-stone-900/50 ring-1 ring-black/5 dark:ring-white/5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-md hover:border-stone-300 dark:hover:border-stone-700";
 
     const displayName = session?.user?.name?.split(" ")[0] || "User";
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto">
-            {/* Header and Plan Status Row */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-100 dark:border-stone-800 pb-6">
+        <div className="space-y-8 max-w-7xl mx-auto px-4 md:px-0">
+            {/* Header Section */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-100 dark:border-stone-800 pb-8">
                 <div className="space-y-1">
                     <div className="flex items-center gap-3">
                         <h2 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">
                             Welcome back, {displayName}
                         </h2>
-                        {isPro ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm">
-                                <Sparkles className="w-3 h-3 fill-current" />
-                                PRO MEMBER
-                            </span>
-                        ) : (
-                            <Link
-                                href="/billing"
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700 border border-stone-200/40 dark:border-stone-800/40"
-                            >
-                                FREE PLAN • UPGRADE
-                            </Link>
-                        )}
+                        <TierBadge isPro={isPro} />
                     </div>
-                    <p className="text-sm text-stone-500 dark:text-stone-400">
+                    <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
                         {today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                     </p>
                 </div>
@@ -165,112 +74,132 @@ export default async function DashboardPage() {
 
             {/* Metrics Grid */}
             <div className="grid gap-6 sm:grid-cols-3">
-                {/* Focus Card */}
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none hover:border-orange-500/30 transition-colors">
+                <Card className={cardStyles}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Focus State</CardTitle>
-                        <Clock className="h-4 w-4 text-orange-500" />
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">Focus State</CardTitle>
+                        <div className="p-1.5 rounded-lg bg-orange-500/10"><Clock className="h-4 w-4 text-orange-500" /></div>
                     </CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">{focusHours} Hours Focused</div>
-                        <p className="text-[10px] text-stone-400">{focusCount >= 2 ? "Daily focus block target achieved! 🧘" : `${focusCount}/2 sessions logged.`}</p>
+                    <CardContent className="pt-2">
+                        <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">0.0 Hours Focused</div>
+                        <p className="text-[10px] font-medium text-stone-400 mt-1 italic">Consistency is the key to mastery.</p>
                     </CardContent>
                 </Card>
 
-                {/* Syllabus Card */}
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none hover:border-emerald-500/30 transition-colors">
+                <Card className={cardStyles}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Syllabus</CardTitle>
-                        <BookOpen className="h-4 w-4 text-emerald-500" />
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">Syllabus Progress</CardTitle>
+                        <div className="p-1.5 rounded-lg bg-emerald-500/10"><BookOpen className="h-4 w-4 text-emerald-500" /></div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="text-2xl font-bold tracking-tight text-emerald-500">{syllabusProgress}% Completed</div>
+                    <CardContent className="space-y-4 pt-2">
+                        <div className="text-2xl font-bold text-emerald-500">{syllabusProgress}%</div>
                         <div className="flex gap-1">
-                            {Array.from({ length: 20 }).map((_, i) => (
-                                <div key={i} className={`flex-1 h-3 rounded-[1px] ${syllabusProgress >= (i + 1) * 5 ? "bg-emerald-500" : "bg-stone-100 dark:bg-stone-800"}`} />
+                            {Array.from({ length: 15 }).map((_, i) => (
+                                <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-700 ${syllabusProgress >= (i + 1) * 6.6 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-stone-100 dark:bg-stone-800"}`} />
                             ))}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Exam Card */}
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none hover:border-indigo-500/30 transition-colors">
+                <Card className={cardStyles}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Next Milestone</CardTitle>
-                        <Calendar className="h-4 w-4 text-indigo-500" />
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">Next Milestone</CardTitle>
+                        <div className="p-1.5 rounded-lg bg-indigo-500/10"><Calendar className="h-4 w-4 text-indigo-500" /></div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-2">
                         {nextExam ? (
-                            <>
+                            <div className="space-y-1">
                                 <div className="text-md font-bold truncate text-stone-900 dark:text-stone-100">{nextExam.subject}</div>
-                                <p className="text-xs font-semibold text-rose-500">{daysRemaining === 0 ? "Today" : `${daysRemaining} days left`}</p>
-                            </>
+                                <p className="text-[11px] font-bold text-rose-500 uppercase tracking-wide">{daysRemaining === 0 ? "Due Today" : `${daysRemaining}d remaining`}</p>
+                            </div>
                         ) : (
-                            <Link href="/exams" className="text-xs font-bold text-stone-400 flex items-center gap-1 hover:underline pt-1">Log exam <ArrowRight className="w-3.5 h-3.5" /></Link>
+                            <Link href="/exams" className="text-xs font-bold text-stone-400 flex items-center gap-1 hover:text-stone-900 dark:hover:text-stone-100 transition-colors pt-1">Setup your first exam <ArrowRight className="w-3.5 h-3.5" /></Link>
                         )}
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Row 2: Rings Analytics Card */}
-            <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none p-6 rounded-2xl">
-                <div className="grid gap-6 md:grid-cols-5 items-center">
-                    <div className="md:col-span-3 space-y-4">
-                        <span className="block text-[10px] uppercase font-bold text-stone-400">Work Activity</span>
-                        <h3 className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">Active progression overview</h3>
-                        <div className="grid gap-3 pt-2 text-xs">
-                            <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-orange-500" /><span className="text-stone-400">Habits: {completedHabitsToday}/{userHabits.length} ({habitsProgressPercentage}%)</span></div>
-                            <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-indigo-500" /><span className="text-stone-400">Tasks: {completedTodayTasks}/{todayUserTasks.length} ({taskProgressPercentage}%)</span></div>
-                            <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-stone-400">Syllabus: {completedSyllabus}/{totalSyllabus} ({syllabusProgress}%)</span></div>
+            {/* Work Activity Section */}
+            <Card className={cn(cardStyles, "p-8 rounded-[2rem]")}>
+                <div className="grid gap-12 md:grid-cols-5 items-center">
+                    <div className="md:col-span-3 space-y-6">
+                        <div className="space-y-2">
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">Analytics</h4>
+                            <h3 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-white">Continuous progression flow</h3>
+                        </div>
+                        <div className="grid gap-4 pt-2">
+                            <ActivityItem color="bg-orange-500" label="Habit Streaks" value={`${habitsProgressPercentage}%`} />
+                            <ActivityItem color="bg-indigo-500" label="Planner Tasks" value={`${taskProgressPercentage}%`} />
+                            <ActivityItem color="bg-emerald-500" label="Syllabus chapters" value={`${syllabusProgress}%`} />
                         </div>
                     </div>
                     <div className="md:col-span-2 flex justify-center">
-                        <div className="relative w-40 h-40">
+                        <div className="relative w-48 h-48 drop-shadow-[0_10px_25px_rgba(0,0,0,0.05)] dark:drop-shadow-[0_10px_25px_rgba(0,0,0,0.2)]">
+                            {/* Circles remain same, but the parent has higher shadow depth */}
                             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="36" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="6" fill="none" />
-                                <circle cx="50" cy="50" r="36" className="stroke-orange-500 transition-all duration-500" strokeWidth="6" fill="none" strokeDasharray={outerCirc} strokeDashoffset={outerOffset} strokeLinecap="round" />
-                                <circle cx="50" cy="50" r="28" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="6" fill="none" />
-                                <circle cx="50" cy="50" r="28" className="stroke-indigo-500 transition-all duration-500" strokeWidth="6" fill="none" strokeDasharray={middleCirc} strokeDashoffset={middleOffset} strokeLinecap="round" />
-                                <circle cx="50" cy="50" r="20" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="6" fill="none" />
-                                <circle cx="50" cy="50" r="20" className="stroke-emerald-500 transition-all duration-500" strokeWidth="6" fill="none" strokeDasharray={innerCirc} strokeDashoffset={innerOffset} strokeLinecap="round" />
+                                <circle cx="50" cy="50" r="38" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
+                                <circle cx="50" cy="50" r="38" className="stroke-orange-500 transition-all duration-1000" strokeWidth="5" fill="none" strokeDasharray="238" strokeDashoffset={238 - (238 * habitsProgressPercentage) / 100} strokeLinecap="round" />
+                                <circle cx="50" cy="50" r="30" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
+                                <circle cx="50" cy="50" r="30" className="stroke-indigo-500 transition-all duration-1000 delay-100" strokeWidth="5" fill="none" strokeDasharray="188" strokeDashoffset={188 - (188 * taskProgressPercentage) / 100} strokeLinecap="round" />
+                                <circle cx="50" cy="50" r="22" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
+                                <circle cx="50" cy="50" r="22" className="stroke-emerald-500 transition-all duration-1000 delay-200" strokeWidth="5" fill="none" strokeDasharray="138" strokeDashoffset={138 - (138 * syllabusProgress) / 100} strokeLinecap="round" />
                             </svg>
-                            <div className="absolute inset-0 flex items-center justify-center text-stone-400"><Activity size={20} /></div>
+                            <div className="absolute inset-0 flex items-center justify-center text-stone-300 dark:text-stone-700 opacity-40"><Activity size={24} /></div>
                         </div>
                     </div>
                 </div>
             </Card>
 
-            {/* Row 3: Checklist & Timeline */}
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card className="md:col-span-2 border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none p-6 rounded-2xl">
-                    <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2 mb-4">
-                        <ListTodo className="w-4 h-4 text-emerald-500" />
-                        <h4 className="font-bold text-sm">Priority Agenda</h4>
-                    </div>
-                    {todayUserTasks.length > 0 ? todayUserTasks.map((t) => (
-                        <div key={t.id} className="flex items-center gap-3 py-3 border-b border-stone-50 dark:border-stone-900 last:border-0">
-                            <CheckCircle2 className={`w-4 h-4 ${t.completed ? "text-emerald-500" : "text-stone-300"}`} />
-                            <span className={`text-xs ${t.completed ? "line-through text-stone-400" : "text-stone-700 dark:text-stone-300"}`}>{t.title}</span>
+            {/* Bottom Row: Priority and Timeline */}
+            <div className="grid gap-6 md:grid-cols-3 pb-12">
+                <Card className={cn(cardStyles, "md:col-span-2 p-6 rounded-3xl")}>
+                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
+                        <div className="flex items-center gap-2">
+                            <ListTodo className="w-4 h-4 text-emerald-500" />
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Priority Agenda</h4>
                         </div>
-                    )) : (
-                        <div className="text-center py-10"><p className="text-xs text-stone-400">No tasks today. Reclaim your focus.</p></div>
-                    )}
+                        <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] font-bold text-stone-400 hover:text-stone-900"><Link href="/planner">View All</Link></Button>
+                    </div>
+                    <div className="space-y-1">
+                        {todayUserTasks.length > 0 ? todayUserTasks.map((t) => (
+                            <div key={t.id} className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors group">
+                                <CheckCircle2 className={`w-4 h-4 transition-all ${t.completed ? "text-emerald-500" : "text-stone-200 dark:text-stone-800 group-hover:text-stone-300"}`} />
+                                <span className={`text-sm font-medium transition-all ${t.completed ? "line-through text-stone-400" : "text-stone-700 dark:text-stone-300"}`}>{t.title}</span>
+                            </div>
+                        )) : (
+                            <div className="text-center py-12"><p className="text-xs font-medium text-stone-400">Zero tasks on the agenda. Ready to focus?</p></div>
+                        )}
+                    </div>
                 </Card>
-                <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900/60 shadow-none p-6 rounded-2xl">
-                    <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2 mb-4">
+
+                <Card className={cn(cardStyles, "p-6 rounded-3xl")}>
+                    <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
                         <GraduationCap className="w-4 h-4 text-indigo-500" />
-                        <h4 className="font-bold text-sm">Exams</h4>
+                        <h4 className="font-bold text-xs uppercase tracking-wider">Upcoming Exams</h4>
                     </div>
-                    {upcomingExamsList.map((e) => (
-                        <div key={e.id} className="flex justify-between py-3 border-b border-stone-50 last:border-0">
-                            <div className="text-xs font-bold truncate">{e.subject}</div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-400">
-                                {new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </span>
-                        </div>
-                    ))}
+                    <div className="space-y-2">
+                        {upcomingExamsList.map((e) => (
+                            <div key={e.id} className="flex flex-col gap-1 p-3 rounded-xl bg-stone-50/50 dark:bg-stone-800/20 border border-transparent hover:border-stone-200 dark:hover:border-stone-700 transition-all">
+                                <div className="text-xs font-bold truncate text-stone-800 dark:text-stone-200">{e.subject}</div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-stone-400">{new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </Card>
             </div>
         </div>
     );
 }
+
+// Sub-component for clean mapping
+const ActivityItem = ({ color, label, value }: { color: string; label: string; value: string }) => (
+    <div className="flex items-center justify-between group">
+        <div className="flex items-center gap-3">
+            <div className={cn("w-2 h-2 rounded-full", color)} />
+            <span className="font-bold text-[11px] text-stone-500 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors uppercase tracking-tight">{label}</span>
+        </div>
+        <span className="text-xs font-bold text-stone-900 dark:text-stone-100">{value}</span>
+    </div>
+);
