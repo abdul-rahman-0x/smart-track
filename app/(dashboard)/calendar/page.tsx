@@ -5,15 +5,17 @@ import { db } from "@/db";
 import { tasks } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { CalendarClient } from "./calendar-client";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Roadmap | Smart-Track",
+    description: "Your long-term consistency and academic progress visualization.",
+};
 
 export default async function CalendarPage() {
     const session = await auth();
+    if (!session?.user?.id) redirect("/login");
 
-    if (!session?.user?.id) {
-        redirect("/login");
-    }
-
-    // Fetch all tasks for the logged-in user to compute calendar completion activity
     const userTasks = await db
         .select({
             id: tasks.id,
@@ -25,5 +27,9 @@ export default async function CalendarPage() {
         .from(tasks)
         .where(eq(tasks.userId, session.user.id));
 
-    return <CalendarClient initialTasks={userTasks} />;
+    return (
+        <div className="space-y-10">
+            <CalendarClient initialTasks={userTasks} />
+        </div>
+    );
 }
