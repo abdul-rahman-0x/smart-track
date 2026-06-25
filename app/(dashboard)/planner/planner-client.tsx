@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress"; // Make sure to add progress via shadcn
+import { Progress } from "@/components/ui/progress";
 import { createPlannerTask, toggleTask, deleteTask, clearDayTasks, clearWeekTasks } from "./actions";
 import { ChevronLeft, ChevronRight, Plus, Trash, RefreshCw } from "lucide-react";
 
@@ -24,7 +24,7 @@ interface PlannerClientProps {
 }
 
 const HOURS_LIST = [
-  "08:00", "09:00", "10:00", "11:00", "12:00", 
+  "08:00", "09:00", "10:00", "11:00", "12:00",
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
 ];
 
@@ -115,29 +115,26 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
       {/* Top Navigation */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-100 dark:border-stone-800 pb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Planner</h2>
-          <p className="text-stone-500 dark:text-stone-400">Weekly & Daily organization.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Planner</h1>
         </div>
 
         {/* Dynamic Selector Toggle */}
         <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl self-start sm:self-auto">
           <button
             onClick={() => setActiveTab("weekly")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg ${
-              activeTab === "weekly"
-                ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
-                : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-            }`}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg ${activeTab === "weekly"
+              ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
+              : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
+              }`}
           >
             Weekly
           </button>
           <button
             onClick={() => setActiveTab("daily")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg ${
-              activeTab === "daily"
-                ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
-                : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-            }`}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg ${activeTab === "daily"
+              ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
+              : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
+              }`}
           >
             Daily
           </button>
@@ -195,7 +192,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                               {task.title}
                             </span>
                           </div>
-                          <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                          <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-pointer">
                             <Trash className="w-3 h-3" />
                           </button>
                         </div>
@@ -246,7 +243,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                           <span className="font-bold text-stone-400">{idx + 1}.</span>
                           <span className="text-xs font-semibold">{task.title}</span>
                         </div>
-                        <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                        <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-pointer">
                           <Trash className="w-3 h-3" />
                         </button>
                       </div>
@@ -293,7 +290,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                           {task.title}
                         </span>
                       </div>
-                      <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                      <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-pointer">
                         <Trash className="w-3 h-3" />
                       </button>
                     </div>
@@ -377,7 +374,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                                   () => setHourlyInputs((prev) => ({ ...prev, [hour]: "" }))
                                 );
                               }}
-                              className="flex-1 max-w-md flex gap-2"
+                              className="flex-1 max-w-full flex gap-2"
                             >
                               <Input
                                 placeholder="Schedule task..."
@@ -393,7 +390,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                         </div>
 
                         {matchingTask && (
-                          <button onClick={async () => await deleteTask(matchingTask.id)} className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                          <button onClick={async () => await deleteTask(matchingTask.id)} className="text-stone-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-pointer">
                             <Trash className="w-4 h-4" />
                           </button>
                         )}
@@ -426,7 +423,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                             {task.title.startsWith("[") ? task.title.split("]")[1].trim() : task.title}
                           </span>
                         </div>
-                        <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                        <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-pointer">
                           <Trash className="w-3 h-3" />
                         </button>
                       </div>
@@ -475,7 +472,7 @@ export function PlannerClient({ selectedDateStr, initialTasks }: PlannerClientPr
                             {task.title.startsWith("[") ? task.title.split("]")[1].trim() : task.title}
                           </span>
                         </div>
-                        <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
+                        <button onClick={async () => await deleteTask(task.id)} className="text-stone-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 cursor-pointer">
                           <Trash className="w-3 h-3" />
                         </button>
                       </div>
