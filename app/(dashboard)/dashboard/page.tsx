@@ -51,7 +51,7 @@ export default async function DashboardPage() {
     const habitsProgressPercentage = userHabits.length > 0 ? Math.round((userHabits.filter(h => todayCompletions.some(c => c.habitId === h.id)).length / userHabits.length) * 100) : 0;
 
     // --- SHARED UI CLASSES (Task 2: Elevated Depth) ---
-    const cardStyles = "border border-stone-200/60 dark:border-stone-800/60 bg-white dark:bg-stone-900/50 ring-1 ring-black/5 dark:ring-white/5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-md hover:border-stone-300 dark:hover:border-stone-700";
+    const cardStyles = "border border-stone-200/60 dark:border-stone-800/60 bg-white dark:bg-stone-900/50 ring-1 ring-black/5 dark:ring-white/5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)] transition-all duration-300 shadow-md";
 
     const displayName = session?.user?.name?.split(" ")[0] || "User";
 
@@ -123,7 +123,7 @@ export default async function DashboardPage() {
                 <div className="grid gap-12 md:grid-cols-5 items-center">
                     <div className="md:col-span-3 space-y-6">
                         <div className="space-y-2">
-                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">Analytics</h4>
+                            <h4 className="font-sans text-[10px] font-bold uppercase tracking-[0.15em] text-orange-500">Analytics</h4>
                             <h3 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-white">Continuous progression flow</h3>
                         </div>
                         <div className="grid gap-4 pt-2">
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
                     <div className="md:col-span-2 flex justify-center">
-                        <div className="relative w-48 h-48 drop-shadow-[0_10px_25px_rgba(0,0,0,0.05)] dark:drop-shadow-[0_10px_25px_rgba(0,0,0,0.2)]">
+                        <div className="relative w-48 h-48">
                             {/* Circles remain same, but the parent has higher shadow depth */}
                             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                                 <circle cx="50" cy="50" r="38" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
@@ -150,42 +150,95 @@ export default async function DashboardPage() {
             </Card>
 
             {/* Bottom Row: Priority and Timeline */}
-            <div className="grid gap-6 md:grid-cols-3 pb-12">
-                <Card className={cn(cardStyles, "md:col-span-2 p-6 rounded-3xl")}>
-                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
+            <div className="grid gap-6 md:grid-cols-3 pb-12 items-start">
+                {/* 1. Priority Agenda Card */}
+                <Card className={cn(cardStyles, "md:col-span-2 p-6 rounded-3xl flex flex-col h-[300px] overflow-hidden")}>
+                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 mb-2 shrink-0">
                         <div className="flex items-center gap-2">
                             <ListTodo className="w-4 h-4 text-emerald-500" />
-                            <h4 className="font-bold text-xs uppercase tracking-wider">Priority Agenda</h4>
+                            <h4 className="font-sans font-bold text-[10px] uppercase tracking-[0.15em] text-stone-400">Priority Agenda</h4>
                         </div>
-                        <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] font-bold text-stone-400 hover:text-stone-900"><Link href="/planner">View All</Link></Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="h-6 px-2 text-[9px] font-bold text-stone-400 hover:text-stone-900 dark:hover:text-stone-50 transition-colors"
+                        >
+                            <Link href="/planner">View All</Link>
+                        </Button>
                     </div>
-                    <div className="space-y-1">
-                        {todayUserTasks.length > 0 ? todayUserTasks.map((t) => (
-                            <div key={t.id} className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors group">
-                                <CheckCircle2 className={`w-4 h-4 transition-all ${t.completed ? "text-emerald-500" : "text-stone-200 dark:text-stone-800 group-hover:text-stone-300"}`} />
-                                <span className={`text-sm font-medium transition-all ${t.completed ? "line-through text-stone-400" : "text-stone-700 dark:text-stone-300"}`}>{t.title}</span>
-                            </div>
-                        )) : (
-                            <div className="text-center py-12"><p className="text-xs font-medium text-stone-400">Zero tasks on the agenda. Ready to focus?</p></div>
-                        )}
+
+                    <div className="overflow-y-auto pr-2 custom-scrollbar scroll-mask flex-1 py-4">
+                        <div className="space-y-1">
+                            {todayUserTasks.length > 0 ? todayUserTasks.map((t) => (
+                                <div key={t.id} className="flex items-start gap-3 py-2.5 px-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors group">
+                                    <CheckCircle2 className={cn(
+                                        "w-4 h-4 mt-0.5 shrink-0 transition-all",
+                                        t.completed ? "text-emerald-500" : "text-stone-200 dark:text-stone-800 group-hover:text-stone-300"
+                                    )} />
+                                    <span className={cn(
+                                        "text-xs font-medium transition-all line-clamp-1 leading-snug",
+                                        t.completed ? "line-through text-stone-400" : "text-stone-700 dark:text-stone-300"
+                                    )}>
+                                        {t.title}
+                                    </span>
+                                </div>
+                            )) : (
+                                <div className="h-full flex items-center justify-center py-12">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-300 dark:text-stone-700">Empty Agenda</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </Card>
 
-                <Card className={cn(cardStyles, "p-6 rounded-3xl")}>
-                    <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
-                        <GraduationCap className="w-4 h-4 text-indigo-500" />
-                        <h4 className="font-bold text-xs uppercase tracking-wider">Upcoming Exams</h4>
+                {/* 2. Upcoming Exams Card - Now with View All Button */}
+                <Card className={cn(cardStyles, "p-6 rounded-3xl flex flex-col h-[300px] overflow-hidden")}>
+                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 mb-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-indigo-500" />
+                            <h4 className="font-sans font-bold text-[10px] uppercase tracking-[0.15em] text-stone-400">Upcoming Exams</h4>
+                        </div>
+                        {/* Added: Symmetric Navigation Button */}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="h-6 px-2 text-[9px] font-bold text-stone-400 hover:text-stone-900 dark:hover:text-stone-50 transition-colors"
+                        >
+                            <Link href="/exams">View All</Link>
+                        </Button>
                     </div>
-                    <div className="space-y-2">
-                        {upcomingExamsList.map((e) => (
-                            <div key={e.id} className="flex flex-col gap-1 p-3 rounded-xl bg-stone-50/50 dark:bg-stone-800/20 border border-transparent hover:border-stone-200 dark:hover:border-stone-700 transition-all">
-                                <div className="text-xs font-bold truncate text-stone-800 dark:text-stone-200">{e.subject}</div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-stone-400">{new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+
+                    <div className="overflow-y-auto pr-2 custom-scrollbar scroll-mask flex-1 py-4">
+                        <div className="space-y-2">
+                            {upcomingExamsList.length > 0 ? upcomingExamsList.map((e) => (
+                                <div
+                                    key={e.id}
+                                    className={cn(
+                                        "flex flex-col gap-1 p-3 rounded-xl transition-all duration-200 shrink-0",
+                                        "bg-stone-100/40 dark:bg-stone-900/60",
+                                        "border border-stone-200/50 dark:border-stone-800/50",
+                                        "shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]",
+                                        "hover:bg-stone-100/60 dark:hover:bg-stone-800/80 hover:shadow-none"
+                                    )}
+                                >
+                                    <div className="text-[11px] font-bold truncate text-stone-900 dark:text-stone-100 line-clamp-1">
+                                        {e.subject}
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[9px] font-bold text-stone-500 dark:text-stone-400 uppercase">
+                                            {new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                        </span>
+                                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            )) : (
+                                <div className="h-full flex items-center justify-center py-12">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-300 dark:text-stone-700">No Exams</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </Card>
             </div>
@@ -198,7 +251,7 @@ const ActivityItem = ({ color, label, value }: { color: string; label: string; v
     <div className="flex items-center justify-between group">
         <div className="flex items-center gap-3">
             <div className={cn("w-2 h-2 rounded-full", color)} />
-            <span className="font-bold text-[11px] text-stone-500 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors uppercase tracking-tight">{label}</span>
+            <span className="font-bold text-[12px] text-stone-500 dark:text-stone-400 transition-colors tracking-[0.10em]">{label}</span>
         </div>
         <span className="text-xs font-bold text-stone-900 dark:text-stone-100">{value}</span>
     </div>

@@ -143,3 +143,40 @@
     line-height: 1.1;
   }
 }
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-stone-200 dark:bg-stone-800 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-stone-300 dark:bg-stone-700;
+  }
+
+  /* Task: Edge Masking for Premium Scrolling */
+  .scroll-mask {
+    mask-image: linear-gradient(to bottom,
+        transparent 0%,
+        black 8%,
+        black 92%,
+        transparent 100%);
+
+    -webkit-mask-image: linear-gradient(to bottom,
+        transparent 0%,
+        black 8%,
+        black 92%,
+        transparent 100%);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-stone-200/50 dark:bg-stone-800/50 rounded-full;
+  }
+}
