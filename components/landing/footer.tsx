@@ -21,7 +21,6 @@ export default function Footer() {
     return (
         <footer className="w-full pt-20">
             <div className="mx-auto max-w-5xl px-4">
-
                 {/* --- TOP CTA SECTION --- */}
                 <div className="flex flex-col items-center border-b border-stone-200/60 dark:border-stone-900/60 pb-20 text-center space-y-6">
                     <Logo className="h-10 w-auto" />
@@ -36,36 +35,35 @@ export default function Footer() {
                     </p>
 
                     <div className="pt-4">
-                        <Button asChild size="lg"
-                            className="px-4">
-                            <Link href="/login">
-                                Start for free
-                            </Link>
+                        <Button asChild size="lg" className="px-4">
+                            <Link href="/login">Start for free</Link>
                         </Button>
                     </div>
                 </div>
 
                 {/* --- MAIN LINKS SECTION --- */}
                 <div className="flex flex-col md:flex-row justify-between items-start py-20 gap-12">
-
                     <div className="max-w-[280px] space-y-4">
                         <Logo className="h-7 w-auto" />
                         <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                            Secure, fast, and seamless planning made effortless. Build your daily streaks and focus on what actually matters.
+                            Secure, fast, and seamless planning made effortless.
+                            Build your daily streaks and focus on what actually
+                            matters.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-16 md:gap-32">
                         {/* Resources */}
                         <div className="space-y-5">
-                            <h4 className="font-sans text-sm text-stone-900 dark:text-stone-50">Resources</h4>
+                            <h4 className="font-sans text-sm text-stone-900 dark:text-stone-50">
+                                Resources
+                            </h4>
                             <ul className="space-y-2">
                                 {footerLinks.resources.map((link) => (
                                     <li key={link.name}>
                                         <Link
                                             href={link.href}
-                                            className="text-xs text-stone-500 dark:text-stone-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer"
-                                        >
+                                            className="text-xs text-stone-500 dark:text-stone-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer">
                                             {link.name}
                                         </Link>
                                     </li>
@@ -75,14 +73,15 @@ export default function Footer() {
 
                         {/* Socials */}
                         <div className="space-y-5">
-                            <h4 className="font-sans text-sm text-stone-900 dark:text-stone-50">Socials</h4>
+                            <h4 className="font-sans text-sm text-stone-900 dark:text-stone-50">
+                                Socials
+                            </h4>
                             <ul className="space-y-2">
                                 {footerLinks.socials.map((link) => (
                                     <li key={link.name}>
                                         <Link
                                             href={link.href}
-                                            className="text-xs text-stone-500 dark:text-stone-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer"
-                                        >
+                                            className="text-xs text-stone-500 dark:text-stone-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer">
                                             {link.name}
                                         </Link>
                                     </li>
@@ -95,15 +94,14 @@ export default function Footer() {
                 {/* --- BOTTOM BAR --- */}
                 <div className="flex flex-col items-center justify-between gap-6 border-t border-stone-200/60 dark:border-stone-900/60 py-14 md:flex-row">
                     <p className="text-xs text-stone-400">
-                        © 2026 Smart Track
+                        © 2026 Smart Track. All rights reserved.
                     </p>
 
                     <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
                         <span>Made by</span>
                         <Link
                             href="https://github.com/abdul-rahman-0x"
-                            className="font-semibold text-stone-900 dark:text-stone-50 transition-colors duration-300 hover:text-orange-500 cursor-pointer"
-                        >
+                            className="font-semibold text-stone-900 dark:text-stone-50 transition-colors duration-300 hover:text-orange-500 cursor-pointer">
                             Abdul Rahman
                         </Link>
                     </div>
