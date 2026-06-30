@@ -31,8 +31,13 @@ export default async function BillingPage() {
     // Server actions wrapper
     const handleUpgrade = async () => {
         "use server";
-        // Using your Stripe Monthly Price ID
-        const priceId = "price_1ThUMyQ1vNDl9oKo21feyFzG";
+        // Dynamically fetch from your new .env variables
+        const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+        if (!priceId) {
+            throw new Error(
+                "Stripe Price ID is missing in Production environment.",
+            );
+        }
         await createCheckoutSession(priceId);
     };
 
