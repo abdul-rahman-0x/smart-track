@@ -1,247 +1,315 @@
-# smart-track
+# Smart Track
 
 <p align="center">
-  <strong>Stop losing track of your deadlines. Know your tasks, master your habits, and perform with clarity.</strong>
+  <strong>Plan intentionally, build consistent habits, and stay focused on what matters.</strong>
 </p>
 
 <p align="center">
-  smart-track gives you a clear, calm view of your entire academic and daily life—exams, assignments, and habits—all in one place. No more switching between apps, lost sticky notes, or forgotten routines. Just open smart-track, plan your day, build your streaks, and focus on what actually matters.
+  smart-track is a productivity platform designed for students, developers, and self-learners who need more than a simple to-do list. It combines task management, habit tracking, academic planning, and subscription-based productivity tools into a single, structured workspace built for long-term consistency.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-15-black?style=flat&logo=nextdotjs" alt="Next.js" />
-  <img src="https://img.shields.io/badge/React-19-%2361DAFB?style=flat&logo=react&logoColor=black" alt="React" />
-  <img src="https://img.shields.io/badge/Tailwind-CSS-%2306B6D4?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind" />
-  <img src="https://img.shields.io/badge/TypeScript-Strict-%233178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Auth.js-V5-%23000000?style=flat&logo=nextdotjs&logoColor=white" alt="Auth.js" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Neon-%234169E1?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Stripe-Billing-%23008CFF?style=flat&logo=stripe&logoColor=white" alt="Stripe" />
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat&logo=nextdotjs" />
+  <img src="https://img.shields.io/badge/React-19-%2361DAFB?style=flat&logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/TypeScript-Strict-%233178C6?style=flat&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/TailwindCSS-4-%2306B6D4?style=flat&logo=tailwindcss&logoColor=white" />
+  <img src="https://img.shields.io/badge/Auth.js-v5-black?style=flat" />
+  <img src="https://img.shields.io/badge/Drizzle-ORM-%23C5F74F?style=flat" />
+  <img src="https://img.shields.io/badge/Neon-PostgreSQL-%234169E1?style=flat&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Stripe-Billing-%23008CFF?style=flat&logo=stripe&logoColor=white" />
 </p>
 
-## The Story Behind smart-track
+---
 
-Students and self-learners handle multiple streams of complex information every day—upcoming exams, homework assignments, daily routines, and notes. When these get scattered across different apps, physical notebooks, and reminders, it quickly leads to mental fatigue, stress, and missed deadlines.
+## Why smart-track Exists
 
-We built **smart-track** to unify these streams into a single, cohesive, and calm workspace. It acts as a digital anchor for your goals. Whether you are prepping for midterms, building a daily reading habit, or tracking a project, smart-track organizes the chaos so you can learn and build with peace of mind.
+Modern workflows subject us to continuous information overload. Managing exams, tracking habits, scheduling coding projects, and monitoring personal subscriptions typically requires context-switching across four or five fragmented applications. This friction is where consistency breaks down.
 
+smart-track was built to eliminate this overhead. Rather than introducing complex nesting or productivity "hype," the platform unifies planning, tracking, and execution into a single, intuitive workflow. The objective is simple: **minimize the mental energy spent on organization, so users can focus on execution.**
 
-## Table of Contents
+> **Goal:** Build a productivity system that helps users think less about organization and spend more time doing meaningful work.
 
-- [Why It Matters](#why-it-matters)
-- [User Experience](#user-experience)
-- [How It Works](#how-it-works)
-- [The Architecture](#the-architecture)
-- [Project Structure](#project-structure)
-- [Technology Stack](#technology-stack)
-- [Getting Started](#getting-started)
-- [Project Lead](#project-lead)
+---
 
+## The Engineering Challenge
 
-## Why It Matters
+Building a robust, subscription-based productivity tool presented several complex architectural and state-management challenges. Below is how these hurdles were resolved:
 
-Most planner applications feel overly complex and cluttered. They force you to spend more time setting up templates and checking off boxes than actually doing the real work. Over time, these planners get abandoned because they add to the overwhelm.
+### 1. Payment Integrity & Idempotent Webhooks
+Relying strictly on client-side state transitions for sensitive billing access is highly insecure. To solve this, smart-track processes all billing states asynchronously using cryptographically signed **Stripe webhooks**. 
+* **The Solution**: The system processes incoming events through a resilient boundary that verifies Stripe signatures. It logs processed event IDs in an idempotency cache to prevent duplicate writes from network retries, ensuring that payment state synchronization is consistent and fail-safe.
 
-**smart-track** changes that by keeping things simple, direct, and focused on execution:
-- **Clarity Over Chaos:** Your daily habits, assignment deadlines, and exam milestones live side-by-side, giving you an immediate picture of your day.
-- **Consistent Habits:** Visual streak counters motivate you to maintain consistency in your daily routines, from physical health to learning schedules.
-- **Proactive Planning:** Dedicated exam countdown panels prevent last-minute cramming by showing you exactly how many days you have left to prepare.
-- **Responsive by Default:** Transitions seamlessly from planning on your desktop to executing your tasks on your phone, resolving broken mobile navigation patterns.
+### 2. Transactional Database Safety
+Updating a user's subscription tier involves mutating several data records at once. If the user's tier details change but the application quota configurations fail to update, the system is left in an unstable state.
+* **The Solution**: We leverage **Drizzle ORM transactional queries** (`db.transaction()`). If any stage of the database write fails, the entire transaction is immediately rolled back, keeping user records structurally sound.
 
+### 3. Real-Time Query Efficiency
+Relational databases can slow down rapidly when computing complex user analytics, streak counters, and daily checklists on a single dashboard view.
+* **The Solution**: Using **Neon PostgreSQL** and **Drizzle ORM**, we implemented strategic indexing on high-frequency lookups (specifically composite indexes on `userId` and `habitId`). This optimization maintains fast, predictable query execution times even as historical user tracking data expands.
 
-## User Experience
+### 4. Zero-Trust Defensive Coding
+Malicious or malformed inputs can easily corrupt database state.
+* **The Solution**: All incoming data, whether originating from client forms or server action invocations, is rigorously parsed using **Zod** schema validations at the boundary layer before it can trigger database execution.
 
-smart-track answers the questions that keep you organized in your day-to-day life:
+---
 
-- "What exam do I need to prepare for next, and how much time do I have left?"
-- "Which of my habits have I maintained today, and which ones need attention?"
-- "What are my highest priority assignments for this week?"
-- "How can I quickly manage my calendar on my mobile phone while working on my laptop?"
+## Core System Architecture
 
+To keep the platform robust, transparent, and easy to maintain, the underlying processes are divided into four core workflows:
 
-## How It Works
+### 1. User Productivity Workflow
+This system manages how an authenticated user moves through the platform's daily lifecycle, enforcing subscription limits and compiling streak data as they execute tasks.
 
 ```mermaid
-flowchart LR
-  A["Set Up Your Account"] --> B["Define Dynamic Habits"]
-  B --> C["Log Exams & Assignments"]
-  C --> D["Track Daily Progress"]
-  D --> E["Analyze & Build Streaks"]
-  F["Export PDF Schedules"] --- E
+flowchart TD
+    A[User Lands on App] --> B{Active Auth Session?}
+    B -- No --> C[Auth.js Sign In / Google OAuth] --> D[Initialize User Profile & Onboarding]
+    B -- Yes --> E[Redirect to Dashboard]
+    D --> E
+    E --> F{Subscription Status?}
+    F -- Premium --> G[Unlock Multi-tracker & Premium Analytics]
+    F -- Free Tier --> H[Enforce Standard Tracking & Usage Quotas]
+    G --> I[Workspace: Create habits, tasks & goals]
+    H --> I
+    I --> J[Daily Execution & Progress Logging]
+    J --> K[Calculate Streaks & Metric Computations]
+    K --> L[Generate Analytical Visualizations]
+    L --> M[Long-Term Performance Optimization]
+    M --> I
+```
+---
+
+### 2. Authentication Sequence
+
+We handle authentication securely using **Auth.js v5** at the server level, utilizing native Next.js middleware routing to check authorization rules before rendering user-facing views.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Client Browser
+    participant M as Next.js Middleware
+    participant A as Auth.js v5 (Server)
+    participant G as Google OAuth Provider
+    participant D as Neon PostgreSQL (Drizzle)
+
+    U->>M: Access Protected Route (/dashboard)
+    M->>A: Validate Session Cookie
+    alt Session Invalid / Expired
+        A-->>M: No Active Session
+        M-->>U: Redirect to /login
+        U->>U: Click "Sign in with Google"
+        U->>G: Authorize Request
+        G-->>A: OAuth Token & User Profile Payload
+        A->>D: Upsert User & Session Records
+        D-->>A: DB Write Complete
+        A-->>U: Issue Signed Session Cookie
+    else Session Valid
+        M-->>U: Resolve Component Layout (RSC)
+    end
+    U->>A: Load Dashboard Data (Server Actions)
+    A->>D: Fetch Analytics & Habits
+    D-->>A: Data Records
+    A-->>U: Render React Server Components
 ```
 
+---
 
-## The Architecture
+### 3. Subscription & Payment Sequence
 
-### Infrastructure & Data Flow
+Stripe Checkout session lifecycles are processed out-of-band to safeguard administrative changes and billing adjustments.
 
 ```mermaid
-graph TB
-    %% Styling Definitions
-    classDef compNode fill:#18181B,stroke:#52525B,stroke-width:1px,color:#F4F4F5
-    classDef dbNode fill:#18181B,stroke:#D97706,stroke-width:1.5px,color:#FBBF24
-    classDef secureNode fill:#18181B,stroke:#EF4444,stroke-width:1.5px,color:#FCA5A5
-    classDef extNode fill:#18181B,stroke:#06B6D4,stroke-width:1.5px,color:#67E8F9
-    classDef noteNode fill:#FEF08A,stroke:#CA8A04,stroke-width:1px,color:#854D0E,font-style:italic
+sequenceDiagram
+    autonumber
+    participant U as Client Browser
+    participant A as Next.js Server (API/Action)
+    participant S as Stripe Billing Engine
+    participant W as Stripe Webhook Receiver
+    participant D as Neon PostgreSQL (Drizzle)
 
-    %% --- 1. DEPLOYMENT LAYER ---
-    subgraph Deploy ["1. DEPLOYMENT & HOSTING ENVIRONMENT"]
-        Vercel["Vercel Cloud Platform <br/> (Edge & Serverless Runtimes)"]:::compNode
-        NeonCloud["Neon DB Cluster <br/> (Serverless Postgres Instance)"]:::compNode
+    U->>A: Initiate Upgrade (Stripe Session Request)
+    A->>S: Create Checkout Session (with User Metadata)
+    S-->>A: Checkout Session URL
+    A-->>U: Redirect to Stripe Checkout
+    U->>S: Input Payment Info & Confirm
+    S-->>U: Confirm Payment & Redirect to App
+    Note over S, W: Asynchronous Webhook Event Triggered
+    S->>W: Webhook Event (checkout.session.completed)
+    rect rgb(30, 41, 59)
+        Note over W, D: Resilient Processing Boundary
+        W->>W: Verify Webhook Signature (Stripe Key)
+        W->>D: Check Event Idempotency (Avoid Double Writes)
+        alt New Event Reference
+            W->>D: Execute DB Transaction (Update Plan & Limits)
+            D-->>W: Transaction Committed / Premium Enabled
+        else Duplicate Event
+            W-->>S: Return 200 OK (Skip Processing)
+        end
     end
+    W-->>S: Return 200 OK Status
+    U->>A: Access Premium Dashboard Area
+    A->>D: Read User Subscription Tier
+    D-->>A: Active Premium Status
+    A-->>U: Mount Premium UI Viewports
+```
 
-    %% --- 2. CLIENT LAYER ---
-    subgraph Client ["2. CLIENT LAYER (React 19 Frontend)"]
-        UI["Dashboard UI View <br/> (Component Layout Grid)"]:::compNode
-        Nav["Responsive Navigation <br/> (Sidebar / Mobile Sheet Menu)"]:::compNode
-        AuthC["NextAuth Context <br/> (Client Session State)"]:::compNode
-        OptState["Optimistic UI Engine <br/> (Immediate state updates)"]:::compNode
-    end
+---
 
-    %% --- 3. SECURE MIDDLEWARE & WEBHOOKS ---
-    subgraph Gateways ["3. SECURE GATEWAYS & API BOUNDARIES"]
-        Middleware["Auth.js Middleware <br/> (Route Access Verification)"]:::secureNode
-        StripeCheckout["Stripe Checkout Client <br/> (Redirects to billing gateway)"]:::extNode
-        StripeWebhook["Stripe Webhook Handler <br/> (Validates cryptographic signature)"]:::secureNode
-    end
+### 4. Subscription State Machine
 
-    %% --- 4. BACKEND LAYER ---
-    subgraph Backend ["4. BACKEND LAYER (Next.js 15 Server Actions)"]
-        SessionCheck["Server Session Checker <br/> (NextAuth token validation)"]:::secureNode
-        LimitEngine["Usage Limit Evaluator <br/> (Checks item counts for free-tier users)"]:::compNode
-        ServerActions["Next.js Server Actions <br/> (Direct server-side operations)"]:::compNode
-        ORM["Drizzle ORM Engine <br/> (Type-safe SQL query generation)"]:::compNode
-    end
+To avoid unexpected access scenarios, we map the subscription lifecycle using a clean state machine. This flow accounts for edge cases like missed payments, grace periods, manual cancellations, and plan resets.
 
-    %% --- 5. EXTERNAL SERVICES ---
-    subgraph CloudServices ["5. EXTERNAL SERVICES"]
-        GoogleAuth["Google Identity Server <br/> (OAuth Identity Verification)"]:::extNode
-        StripeBilling["Stripe Payment Engine <br/> (Subscription status management)"]:::extNode
-    end
-
-    %% --- 6. DATABASE TIER ---
-    subgraph DB ["6. DATABASE TIER (Neon PostgreSQL)"]
-        NeonDB[("Neon Serverless Database")]:::dbNode
-        T_Users["users table"]:::dbNode
-        T_Subs["subscriptions table"]:::dbNode
-        T_Habits["habits table"]:::dbNode
-        T_Tasks["tasks table"]:::dbNode
-    end
-
-    %% --- SYSTEM DESIGN NOTES (STICKIES) ---
-    NoteStripe["Stripe enforces billing tier status <br/> and limits free users <br/> to max 5 active habits." ]:::noteNode
-    NoteAuth["NextAuth v5 handles session validation <br/> and JWT caching at Vercel's <br/> Edge Serverless level."]:::noteNode
-
-    %% --- LAYER FLOW CONNECTIONS ---
+```mermaid
+stateDiagram-v2
+    [*] --> FreeTier : New Account Created
+    FreeTier --> StripeCheckout : Initiate Upgrade
+    StripeCheckout --> PaymentPending : Submit Billing Info
+    PaymentPending --> PremiumActive : Webhook Confirmed (Subscription Created)
+    PaymentPending --> FreeTier : Payment Failed / Cancelled
     
-    %% Client Routing & Security
-    UI -->|1. Path Request| Middleware
-    Middleware -->|2. Path Access Granted| UI
-    AuthC -.->|OAuth Token Request| GoogleAuth
-
-    %% Stripe Upgrade Pipeline
-    UI -.->|3. Trigger Premium Upgrade| StripeCheckout
-    StripeCheckout -->|Redirect Client| StripeBilling
-    StripeBilling -.->|Async Callback| StripeWebhook
-    StripeWebhook -->|4. Update Subscription Model| ORM
-
-    %% Server Mutation & Database Pipeline
-    UI ===>|5. Submit Form / Action| SessionCheck
-    SessionCheck -->|6. Authorize user_id| LimitEngine
-    LimitEngine -->|7. Verify item count limit| ServerActions
-    ServerActions -->|8. Generate SQL Query| ORM
-    ORM ===>|9. Execute Transaction| NeonDB
-
-    %% Database Tables Structure
-    NeonDB --- T_Users
-    NeonDB --- T_Subs
-    NeonDB --- T_Habits
-    NeonDB --- T_Tasks
-
-    %% Dynamic UI Update Loop
-    NeonDB -.->|10. revalidatePath Event| UI
-    UI -.->|11. Immediate Update| OptState
-
-    %% Annotations Connections
-    LimitEngine --- NoteStripe
-    SessionCheck --- NoteAuth
+    state PremiumActive {
+        [*] --> ActiveState
+        ActiveState --> GracePeriod : Payment Missed (invoice.payment_failed)
+        GracePeriod --> ActiveState : Retry Successful (invoice.paid)
+        GracePeriod --> SubscriptionCancelled : Max Retries Exhausted
+        ActiveState --> SubscriptionCancelled : Manual Cancel Triggered
+    }
+    
+    SubscriptionCancelled --> AccessDowngraded : Term End Date Reached (customer.subscription.deleted)
+    AccessDowngraded --> FreeTier : Reset Account Limits
+    AccessDowngraded --> StripeCheckout : Re-subscribe
 ```
+
+---
+
+## Tech Stack & Tooling
+
+- **Framework:** Next.js 16 (App Router, Server Components)
+- **Language:** TypeScript Strict Mode
+- **Frontend Library:** React 19
+- **Authentication:** Auth.js v5 (Google OAuth Provider)
+- **Database:** Neon serverless PostgreSQL
+- **ORM:** Drizzle ORM
+- **Payments:** Stripe Billing Engine
+- **Schema Validation:** Zod
+- **Styling:** Tailwind CSS v4
+- **UI Components:** shadcn/ui
+- **Deployment:** Vercel
+- **Developer Tooling:** Bun, ESLint
+- **Runtime & Package Manager**: Bun 1.x (Fast package manager, bundler, and runner)
+
+---
 
 ## Project Structure
 
-```text
+```bash
 smart-track/
-├── app/                # Next.js 15 App Router Pages & Actions
-│   ├── (dashboard)/    # Core views: Dashboard, Calendar, Planner, Trackers
-│   ├── login/          # Secure Authentication Entry point
-│   ├── onboarding/     # Post-signup user setup details
-│   ├── api/            # API Route Handlers (Stripe webhooks)
-│   └── globals.css     # Global Design Tokens & Tailwind Styles
-├── components/         # Reusable Component blocks
-│   ├── ui/             # Atomic design elements (shadcn/ui primitives)
-│   ├── app-layout.tsx  # Dynamic side-drawer responsive layout wrapper
-│   └── mode-toggle.tsx # Live Dark/Light mode toggle
-├── db/                 # Database schema definitions and config
-│   ├── index.ts        # Database client entry point
-│   └── schema.ts       # Unified Drizzle ORM Schema
-├── lib/                # Shared utilities & billing integrations
-│   ├── auth.ts         # Auth.js (NextAuth v5) Google configuration
-│   └── stripe.ts       # Stripe API configurations and webhook handlers
-└── public/             # Icons, static images, and brand assets
+
+├── app/                    # Next.js App Router pages and route handlers
+│   ├── (dashboard)/        # Main dashboard workspace pages
+│   ├── api/                # Stripe webhooks and API routes
+│   ├── login/              # Authentication gateways
+│   └── onboarding/         # Setup procedures for new profiles
+│
+├── components/             # Modular React components
+│   ├── ui/                 # Design system primitives (shadcn)
+│   ├── dashboard/          # Specialized feature viewports
+│   └── forms/              # Validation-ready form elements
+│
+├── db/                     # Data persistence architecture
+│   ├── index.ts            # Database client instantiation
+│   └── schema.ts           # Unified database schemas
+│
+├── lib/                    # System utilities and APIs
+│   ├── auth.ts             # Auth.js configurations
+│   ├── stripe.ts           # Stripe SDK helpers
+│   └── utils.ts            # Shared core utilities
+│
+├── public/                 # Static graphical assets
+└── types/                  # Global TypeScript type definitions
 ```
 
-## Technology Stack
-
-- **Framework:** Next.js 16 (App Router & Streaming)
-- **State:** React 19 (Server Components & Actions)
-- **Database:** Neon (Serverless PostgreSQL)
-- **ORM:** Drizzle ORM (Type-Safe Schema)
-- **Auth:** Auth.js (v5 Session management with Google OAuth)
-- **Payments:** Stripe (Secure Checkouts & Webhook sync)
-- **Styling:** Tailwind CSS 4 (The Future of CSS)
-- **Validation:** Zod (Reliable Data Integrity)
+---
 
 ## Getting Started
 
-### 1. Requirements
-You will need a `Neon` database connection string, `Google OAuth` developer keys, and a `Stripe` account to run this dashboard locally.
+### 1. Prerequisites
+Ensure you have the following installed on your machine:
+* **Bun 1.x** (Install via `curl -fsSL https://bun.sh/install | bash` or `brew install oven-sh/bun/bun`)
+* An active Neon PostgreSQL Database
+* Google developer console credentials (for OAuth)
+* A Stripe developer account
 
-### 2. Install Dependencies
+### 2. Installation
+Clone the repository and install the dependencies using Bun's ultra-fast installer:
 
 ```bash
+git clone https://github.com/your-username/smart-track.git
+cd smart-track
 bun install
 ```
 
-### 3. Environment Setup
-
-Configure your `.env.local` with the following variables:
-
-```
-# Database Credentials
-DATABASE_URL=your_neon_postgres_url
-
-# Auth.js Configuration
-AUTH_SECRET=your_auth_secret_hash
-AUTH_GOOGLE_ID=your_google_id
-AUTH_GOOGLE_SECRET=your_google_secret
-
-# Stripe Billing Details
-STRIPE_API_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_signing_secret
-```
-
-### 4. Push Database Schema
+### 3. Environment Configuration
+Create a local `.env.local` configuration:
 
 ```bash
-bun drizzle-kit push
+cp .env.example .env.local
 ```
 
-### 5. Start the App
+Add your localized parameters into `.env.local`:
+
+```env
+# Database
+DATABASE_URL="postgresql://username:password@host/neondb?sslmode=require"
+
+# Auth.js
+AUTH_SECRET="generate-a-secure-secret-key"
+AUTH_GOOGLE_ID="your-google-oauth-client-id"
+AUTH_GOOGLE_SECRET="your-google-oauth-client-secret"
+
+# Stripe
+STRIPE_SECRET_KEY="your-stripe-secret-api-key"
+STRIPE_WEBHOOK_SECRET="your-stripe-local-webhook-signing-secret"
+STRIPE_PRICE_ID="your-configured-recurring-price-id"
+
+# Base Domain
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+### 4. Database Setup
+Push your local database schema directly to your live Neon database using `bunx`:
+
+```bash
+bunx drizzle-kit push
+```
+
+### 5. Running Locally
+Launch the fast-refresh local development server:
 
 ```bash
 bun dev
 ```
 
-## Project Lead 
+Open `http://localhost:3000` inside your web browser to view the application.
 
-Crafted with passion by **[Abdul Rahman](https://github.com/abdul-rahman-0x)**  
+---
 
+## Security & Resilience Checklist
+
+* **Zero-Trust Session Architecture**: Authenticated states are validated strictly on the server using **Auth.js v5** sessions and Next.js middleware before rendering layout structures or executing backend transactions.
+* **Cryptographic Webhook Audits**: Stripe payment notifications are secured through asynchronous signature verification to prevent spoofing, alongside database checks to safeguard against duplicate event delivery.
+* **Transactional Reliability**: Utilizes database-level transactional operations (`db.transaction`) when updating user subscriptions, guaranteeing that multi-table writes either commit fully or rollback cleanly upon failure.
+* **Defensive Schema Parsing**: All client-side requests, routing configurations, and server actions are validated at the boundary using **Zod** schemas, mitigating SQL-injection threats and protecting against malformed database payloads.
+* **Secure Environment Isolation**: System credentials and payment gateways are decoupled and isolated at runtime via environment configurations, eliminating hardcoded variables and sensitive configuration leaks in production.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Author
+
+Developed by **[Abdul Rahman](https://github.com/abdul-rahman-0x)**
