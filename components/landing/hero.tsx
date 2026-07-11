@@ -7,7 +7,9 @@ import { HeroMarquee } from "../hero-marquee";
 
 export default function Hero() {
     return (
-        <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col overflow-hidden px-4 pt-28 pb-8 sm:pt-32 lg:pt-24">
+        <section
+            id="home"
+            className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col overflow-hidden px-4 pt-28 pb-8 sm:pt-32 lg:pt-24">
             {/* Background Soft Glow Ambient Light */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-stone-500/10 dark:bg-stone-100/5 rounded-full blur-[90px] -z-10" />
 
