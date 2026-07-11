@@ -20,14 +20,14 @@ export function ModeToggle() {
 
     return (
         <Button
-            variant="outline"
-            size="icon"
+            variant="icon-plain"
+            size="icon-clean"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label="Toggle theme">
             {mounted && theme === "dark" ? (
-                <Sun className="size-4" />
+                <Sun className="size-5" />
             ) : (
-                <Moon className="size-4" />
+                <Moon className="size-5" />
             )}
         </Button>
     );

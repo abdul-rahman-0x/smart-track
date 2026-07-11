@@ -7,12 +7,12 @@ import { HeroMarquee } from "../hero-marquee";
 
 export default function Hero() {
     return (
-        <section className="relative w-full max-w-6xl mx-auto px-4 min-h-[calc(100vh-64px)] flex flex-col justify-center py-12 md:py-16 overflow-hidden">
+        <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col overflow-hidden px-4 pt-28 pb-8 sm:pt-32 lg:pt-24">
             {/* Background Soft Glow Ambient Light */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-stone-500/10 dark:bg-stone-100/5 rounded-full blur-[90px] -z-10" />
 
             {/* Vertically centered grid container */}
-            <div className="grid flex-1 grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
+            <div className="grid flex-1 grid-cols-1 items-center gap-14 lg:grid-cols-12 lg:gap-16">
                 {/* Left Side */}
                 <div className="lg:col-span-6 space-y-8 text-center lg:text-left">
                     <div className="space-y-5">
@@ -85,7 +85,7 @@ export default function Hero() {
                 </div>
 
                 {/* Right Side */}
-                <div className="lg:col-span-6 relative h-[450px] w-full max-w-lg mx-auto flex items-center justify-center">
+                <div className="relative mx-auto mt-8 h-[400px] w-full max-w-md sm:h-[430px] sm:max-w-lg lg:col-span-6 lg:mt-0 lg:h-[450px]">
                     {/* Layer 1 (Base): Habit Grid / Monthly Checklist Card */}
                     <div
                         className="absolute w-[80%] left-2 top-8 p-5 rounded-xl border border-border bg-card/60 backdrop-blur-xl shadow-xl transition-transform duration-500
@@ -150,7 +150,7 @@ export default function Hero() {
                             </span>
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight text-foreground font-serif">
+                        <span className="text-xl font-semibold tracking-tight text-foreground font-serif">
                             3.5 Hours
                         </span>
                         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border">
@@ -168,7 +168,7 @@ export default function Hero() {
                                 <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
                                     Focus Trend
                                 </span>
-                                <h3 className="text-xl font-serif text-foreground font-medium">
+                                <h3 className="text-xl font-serif text-foreground font-semibold">
                                     18.4 hrs
                                 </h3>
                             </div>
@@ -216,7 +216,7 @@ export default function Hero() {
             </div>
 
             {/* Infinite Integrations Marquee component */}
-            <div className="mt-auto pt-10">
+            <div className="mt-12 lg:mt-16">
                 <HeroMarquee />
             </div>
         </section>
