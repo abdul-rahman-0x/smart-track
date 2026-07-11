@@ -14,7 +14,9 @@ import {
 
 export default function Features() {
     return (
-        <section className="max-w-5xl mx-auto px-4 py-20 space-y-12">
+        <section
+            id="features"
+            className="max-w-5xl mx-auto px-4 py-20 space-y-12">
             {/* --- SECTION HEADER --- */}
             <div className="space-y-3 text-center md:text-left">
                 <h3 className="text-3xl tracking-tight text-stone-900 dark:text-white">
@@ -32,7 +34,8 @@ export default function Features() {
                 {/* --- CARD 1: CONSISTENCY ROADMAP (md:col-span-3) --- */}
                 <div className="md:col-span-3 p-6 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800/80 flex flex-col justify-between gap-6 hover:border-emerald-500/30 transition-all duration-300">
                     <div className="space-y-2">
-                        <div className="p-2 w-fit rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        {/* Unified to Emerald Green Glassmorphism */}
+                        <div className="p-2 w-fit rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                             <Calendar className="w-5 h-5" />
                         </div>
                         <h4 className="font-bold text-lg text-stone-900 dark:text-stone-100">
@@ -103,7 +106,8 @@ export default function Features() {
                 {/* --- CARD 2: FOCUS STATE TIMER (md:col-span-2) --- */}
                 <div className="md:col-span-2 p-6 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800/80 flex flex-col justify-between gap-6 hover:border-orange-500/30 transition-all duration-300">
                     <div className="space-y-2">
-                        <div className="p-2 w-fit rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        {/* Unified to Amber Focus Glassmorphism */}
+                        <div className="p-2 w-fit rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                             <Clock className="w-5 h-5" />
                         </div>
                         <h4 className="font-bold text-lg text-stone-900 dark:text-stone-100">
@@ -168,9 +172,10 @@ export default function Features() {
                 </div>
 
                 {/* --- CARD 3: ROUTINES & HABITS (md:col-span-2) --- */}
-                <div className="md:col-span-2 p-6 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800/80 flex flex-col justify-between gap-6 hover:border-orange-500/30 transition-all duration-300">
+                <div className="md:col-span-2 p-6 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800/80 flex flex-col justify-between gap-6 hover:border-emerald-500/30 transition-all duration-300">
                     <div className="space-y-2">
-                        <div className="p-2 w-fit rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        {/* Unified to Emerald Green Glassmorphism */}
+                        <div className="p-2 w-fit rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                             <ListTodo className="w-5 h-5" />
                         </div>
                         <h4 className="font-bold text-lg text-stone-900 dark:text-stone-100">
@@ -183,7 +188,7 @@ export default function Features() {
                         </p>
                     </div>
 
-                    {/* Mockup: Habit grid rows from screenshot */}
+                    {/* Mockup: Habit grid rows */}
                     <div className="p-4 rounded-xl bg-stone-50/50 dark:bg-stone-950/80 border border-stone-200/60 dark:border-stone-900/60 shadow-inner space-y-3">
                         <div className="flex items-center justify-between border-b border-stone-200/50 dark:border-stone-900/50 pb-2">
                             <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">
@@ -229,9 +234,10 @@ export default function Features() {
                 </div>
 
                 {/* --- CARD 4: EXAMS & SYLLABUS COVERAGE (md:col-span-3) --- */}
-                <div className="md:col-span-3 p-6 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800/80 flex flex-col justify-between gap-6 hover:border-emerald-500/30 transition-all duration-300">
+                <div className="md:col-span-3 p-6 rounded-2xl bg-white dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800/80 flex flex-col justify-between gap-6 hover:border-blue-500/30 transition-all duration-300">
                     <div className="space-y-2">
-                        <div className="p-2 w-fit rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        {/* Unified to Academic Blue Glassmorphism */}
+                        <div className="p-2 w-fit rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
                             <BookOpen className="w-5 h-5" />
                         </div>
                         <h4 className="font-bold text-lg text-stone-900 dark:text-stone-100">

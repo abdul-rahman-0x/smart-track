@@ -33,7 +33,9 @@ export default function Pricing() {
     };
 
     return (
-        <section className="max-w-5xl mx-auto px-4 py-20 space-y-12">
+        <section
+            id="pricing"
+            className="max-w-5xl mx-auto px-4 py-20 space-y-12">
             <div className="text-center space-y-4">
                 <h3 className="font-serif font-medium text-3xl sm:text-4xl tracking-[-0.04em] leading-[1.1] text-stone-900 dark:text-white max-w-xl mx-auto">
                     Pick a plan, master your time
@@ -105,12 +107,13 @@ export default function Pricing() {
                     </Button>
                 </div>
 
-                <div className="p-6 bg-stone-950 border-2 border-orange-500 text-stone-100 rounded-2xl flex flex-col justify-between relative overflow-hidden transition-all duration-300">
+                {/* Upgraded Pro card to Emerald accents */}
+                <div className="p-6 bg-stone-950 border-2 border-emerald-500 text-stone-100 rounded-2xl flex flex-col justify-between relative overflow-hidden transition-all duration-300">
                     <span className="absolute top-4 right-4 text-[9px] font-bold text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded bg-emerald-500/10">
                         Most popular
                     </span>
                     <div className="space-y-4">
-                        <span className="text-xs uppercase tracking-wider font-bold text-orange-400">
+                        <span className="text-xs uppercase tracking-wider font-bold text-emerald-400">
                             Pro
                         </span>
                         <div className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
@@ -119,7 +122,7 @@ export default function Pricing() {
                                 /month
                             </span>
                             {isYearly && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     Save 20%
                                 </span>
                             )}
@@ -129,19 +132,19 @@ export default function Pricing() {
                         </p>
                         <div className="border-t border-stone-800 pt-4 space-y-3 text-xs">
                             <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-orange-500" />{" "}
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
                                 Unlimited daily Focus sessions
                             </div>
                             <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-orange-500" />{" "}
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
                                 Google Calendar Integration
                             </div>
                             <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-orange-500" />{" "}
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
                                 Unlimited exams, habits, and tasks
                             </div>
                             <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-orange-500" />{" "}
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
                                 Priority task tags
                             </div>
                         </div>
@@ -149,7 +152,7 @@ export default function Pricing() {
                     <Button
                         disabled={isPending}
                         onClick={handleProUpgrade}
-                        className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200">
+                        className="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-200">
                         {isPending ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

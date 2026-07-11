@@ -9,9 +9,8 @@ export default async function Header() {
 
     return (
         <header className="fixed left-1/2 top-4 z-50 flex h-14 w-[calc(100%-1.5rem)] max-w-[700px] -translate-x-1/2 items-center justify-between rounded-full border border-border/50 bg-background/80 px-3 shadow-sm backdrop-blur-xl transition-all md:top-6 md:h-[60px] md:w-[calc(100%-2rem)]">
-            {/* Logo */}
             <Link
-                href="/"
+                href="/#home"
                 className="flex shrink-0 items-center gap-2 pl-2 transition-opacity hover:opacity-80">
                 <Logo className="h-5 w-5 text-emerald-500" />
 
@@ -23,15 +22,15 @@ export default async function Header() {
             {/* Navigation */}
             <nav className="hidden md:flex items-center gap-8">
                 <a
-                    href="#about"
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                    About
-                </a>
-
-                <a
                     href="#features"
                     className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                     Features
+                </a>
+
+                <a
+                    href="#about"
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                    About
                 </a>
 
                 <a
