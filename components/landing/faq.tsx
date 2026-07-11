@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { SectionBadge } from "@/components/section-badge";
 
 // Structured 7-item general productivity FAQ array
 const FAQ_ITEMS = [
@@ -48,8 +47,6 @@ export default function FAQ() {
         <section className="max-w-4xl mx-auto px-4 py-20 space-y-12">
             {/* --- SECTION HEADER (Updated to match LowrCarbon template) --- */}
             <div className="text-center space-y-4">
-                <SectionBadge>FAQ</SectionBadge>
-
                 <h3 className="font-serif font-medium text-3xl sm:text-4xl tracking-[-0.04em] leading-[1.1] text-stone-900 dark:text-white">
                     Frequently asked questions
                 </h3>
