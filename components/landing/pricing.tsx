@@ -4,7 +4,6 @@ import React, { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { createCheckoutSession } from "@/app/billing/actions";
-import { SectionBadge } from "@/components/section-badge";
 
 export default function Pricing() {
     const [isYearly, setIsYearly] = useState(false);
@@ -36,7 +35,6 @@ export default function Pricing() {
     return (
         <section className="max-w-5xl mx-auto px-4 py-20 space-y-12">
             <div className="text-center space-y-4">
-                <SectionBadge>Pricing</SectionBadge>
                 <h3 className="font-serif font-medium text-3xl sm:text-4xl tracking-[-0.04em] leading-[1.1] text-stone-900 dark:text-white max-w-xl mx-auto">
                     Pick a plan, master your time
                 </h3>

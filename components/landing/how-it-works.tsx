@@ -1,22 +1,13 @@
 "use client";
 
 import React from "react";
-import {
-    Clock,
-    Check,
-    Flame,
-    Sparkles,
-    Target,
-} from "lucide-react";
-import { SectionBadge } from "../section-badge";
+import { Clock, Check, Flame, Sparkles, Target } from "lucide-react";
 
 export default function HowItWorks() {
     return (
         <section className="max-w-5xl mx-auto px-4 py-20 space-y-16">
             {/* --- SECTION HEADER (Option 1 - No brackets/parenthesis) --- */}
             <div className="text-center space-y-4">
-                <SectionBadge>How it works</SectionBadge>
-
                 <h3 className="font-serif font-medium text-3xl sm:text-4xl tracking-[-0.04em] leading-[1.1] text-stone-900 dark:text-white max-w-xl mx-auto">
                     Build a reliable system for continuous progress
                 </h3>

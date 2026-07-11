@@ -11,14 +11,12 @@ import {
     Play,
     RotateCcw,
 } from "lucide-react";
-import { SectionBadge } from "../section-badge";
 
 export default function Features() {
     return (
         <section className="max-w-5xl mx-auto px-4 py-20 space-y-12">
             {/* --- SECTION HEADER --- */}
             <div className="space-y-3 text-center md:text-left">
-                <SectionBadge>Benefits</SectionBadge>
                 <h3 className="text-3xl tracking-tight text-stone-900 dark:text-white">
                     Everything you need to stay on track
                 </h3>

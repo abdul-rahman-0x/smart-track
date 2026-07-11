@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Serif } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-const inter = Inter({
+const montserratSans = Montserrat({
     variable: "--font-inter",
     subsets: ["latin"],
+    weight: ["300", "400", "500", "600", "700"],
     display: "swap",
 });
 
-const ibmPlexSerif = IBM_Plex_Serif({
+const montserratSerif = Montserrat({
     variable: "--font-ibm-plex-serif",
     subsets: ["latin"],
-    weight: ["400", "500", "600", "700"],
+    weight: ["300", "400", "500", "600", "700"],
     display: "swap",
 });
 
@@ -31,7 +32,7 @@ export default function RootLayout({
         <html
             lang="en"
             suppressHydrationWarning
-            className={`${inter.variable} ${ibmPlexSerif.variable} antialiased`}>
+            className={`${montserratSans.variable} ${montserratSerif.variable} antialiased`}>
             <body>
                 <ThemeProvider
                     attribute="class"
