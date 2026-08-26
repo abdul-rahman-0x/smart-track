@@ -61,10 +61,14 @@ export const subscriptions = pgTable("subscriptions", {
         .references(() => users.id, { onDelete: "cascade" })
         .unique(),
     stripeCustomerId: text("stripe_customer_id").notNull().unique(),
+    stripeSubscriptionId: text("stripe_subscription_id").unique(),
+    stripePriceId: text("stripe_price_id"),
     status: text("status").notNull(),
     currentPeriodEnd: timestamp("current_period_end", {
         mode: "date",
     }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const habits = pgTable("habit", {
