@@ -27,7 +27,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { format } from "date-fns";
+import { ModeToggle } from "@/components/mode-toggle";
 import { User } from "next-auth";
 
 interface AppLayoutProps {
@@ -59,24 +59,26 @@ const SidebarContent = ({
     isPro: boolean;
     onLinkClick?: () => void;
 }) => (
-    <div className="flex h-full flex-col bg-white dark:bg-[#0C0C0E]">
-        <div className="flex h-14 items-center px-6 border-b border-border/40">
+    <div className="flex h-full flex-col bg-zinc-50 dark:bg-zinc-950 transition-colors">
+        {/* Continuous Sidebar Header */}
+        <div className="px-6 pt-8 pb-6">
             <Link
                 href="/dashboard"
                 onClick={onLinkClick}
-                className="flex items-center gap-3 font-bold tracking-tighter">
-                <div className="size-6 rounded bg-primary flex items-center justify-center text-primary-foreground text-[10px]">
-                    S
+                className="flex items-center gap-3 group">
+                <div className="size-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-900 shadow-sm transition-transform group-hover:scale-105">
+                    <span className="text-sm font-bold">S</span>
                 </div>
                 {!collapsed && (
-                    <span className="text-sm uppercase tracking-widest">
+                    <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                         SmartTrack
                     </span>
                 )}
             </Link>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4">
+        {/* Navigation - No Dividers */}
+        <nav className="flex-1 px-3 space-y-0.5">
             {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -85,15 +87,15 @@ const SidebarContent = ({
                         href={item.href}
                         onClick={onLinkClick}
                         className={cn(
-                            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
                             isActive
-                                ? "bg-secondary text-foreground shadow-sm"
-                                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+                                ? "bg-zinc-200/50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50"
+                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 hover:bg-zinc-200/30 dark:hover:bg-zinc-900/50",
                         )}>
                         <item.icon
                             className={cn(
                                 "size-4 shrink-0",
-                                isActive ? "text-primary" : "opacity-70",
+                                isActive ? "opacity-100" : "opacity-60",
                             )}
                         />
                         {!collapsed && <span>{item.label}</span>}
@@ -102,18 +104,19 @@ const SidebarContent = ({
             })}
         </nav>
 
-        <div className="p-4 border-t border-border/40 space-y-4">
-            {!isPro && !collapsed && (
-                <div className="rounded-xl bg-primary/5 border border-dashed border-primary/20 p-4">
-                    <p className="text-[11px] font-semibold text-primary uppercase tracking-wider mb-2">
+        {/* Sidebar Footer - Unified Surface */}
+        {!isPro && !collapsed && (
+            <div className="p-4 mt-auto">
+                <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/50 p-4">
+                    <h4 className="text-xs font-semibold text-foreground">
                         Pro Plan
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                        Unlock advanced analytics.
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-normal">
+                        Unlock advanced analytics and study tools.
                     </p>
                     <Button
                         size="sm"
-                        className="w-full h-8 text-[11px] font-bold"
+                        className="w-full h-8 text-xs font-medium mt-3 transition-colors"
                         variant="outline"
                         asChild>
                         <Link href="/billing" onClick={onLinkClick}>
@@ -121,31 +124,8 @@ const SidebarContent = ({
                         </Link>
                     </Button>
                 </div>
-            )}
-
-            <div
-                className={cn(
-                    "flex items-center gap-3 px-2",
-                    collapsed && "justify-center",
-                )}>
-                <Avatar className="size-8 border border-border/40">
-                    <AvatarImage src={user?.image ?? ""} />
-                    <AvatarFallback className="text-[10px]">
-                        {user?.name?.charAt(0)}
-                    </AvatarFallback>
-                </Avatar>
-                {!collapsed && (
-                    <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-bold truncate">
-                            {user?.name}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
-                            {isPro ? "Premium" : "Free"}
-                        </span>
-                    </div>
-                )}
             </div>
-        </div>
+        )}
     </div>
 );
 
@@ -155,10 +135,11 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     return (
-        <div className="flex min-h-screen bg-[#FAFAFA] dark:bg-[#09090B]">
+        <div className="flex min-h-screen bg-white dark:bg-zinc-950">
+            {/* Desktop Sidebar */}
             <aside
                 className={cn(
-                    "hidden lg:flex flex-col border-r border-border/40 sticky top-0 h-screen transition-all duration-300",
+                    "hidden lg:flex flex-col border-r border-zinc-200 dark:border-zinc-900 sticky top-0 h-screen transition-all duration-300 z-50",
                     isCollapsed ? "w-20" : "w-64",
                 )}>
                 <SidebarContent
@@ -169,8 +150,10 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
                 />
             </aside>
 
+            {/* Main Content Area */}
             <div className="flex flex-1 flex-col min-w-0">
-                <header className="flex h-14 items-center justify-between border-b border-border/40 bg-white/60 dark:bg-[#0C0C0E]/60 backdrop-blur-xl px-4 lg:px-8 sticky top-0 z-50">
+                {/* Header */}
+                <header className="flex h-14 items-center justify-between border-b border-zinc-200 dark:border-zinc-900 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md px-4 lg:px-8 sticky top-0 z-40 transition-colors">
                     <div className="flex items-center gap-4">
                         <Sheet
                             open={isMobileOpen}
@@ -179,11 +162,13 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="lg:hidden">
+                                    className="lg:hidden hover:bg-zinc-100 dark:hover:bg-zinc-900">
                                     <PanelLeft className="size-4" />
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="left" className="p-0 w-72">
+                            <SheetContent
+                                side="left"
+                                className="p-0 w-72 border-r border-zinc-200 dark:border-zinc-900">
                                 <SidebarContent
                                     pathname={pathname}
                                     user={user}
@@ -196,30 +181,28 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="hidden lg:flex"
+                            className="hidden lg:flex hover:bg-zinc-100 dark:hover:bg-zinc-900"
                             onClick={() => setIsCollapsed(!isCollapsed)}>
                             <ChevronLeft
                                 className={cn(
-                                    "size-4 transition-transform",
+                                    "size-4 transition-transform duration-300",
                                     isCollapsed && "rotate-180",
                                 )}
                             />
                         </Button>
 
-                        <h2 className="text-sm font-bold tracking-tight text-foreground/80 lg:ml-2">
+                        <h2 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 lg:ml-2">
                             SmartTrack
                         </h2>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 hidden sm:block">
-                            {format(new Date(), "EEEE, MMM do")}
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <ModeToggle />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="size-8 rounded-full p-0 border border-border/40">
+                                    className="size-8 rounded-full p-0 border border-zinc-200 dark:border-zinc-800 hover:ring-2 ring-zinc-100 dark:ring-zinc-900 transition-all">
                                     <Avatar className="size-full">
                                         <AvatarImage src={user?.image ?? ""} />
                                         <AvatarFallback>
@@ -230,25 +213,23 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                                 align="end"
-                                className="w-56 rounded-xl">
-                                <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 p-4">
+                                className="w-56 rounded-xl border-zinc-200 dark:border-zinc-800 shadow-lg">
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 p-4">
                                     Account
                                 </DropdownMenuLabel>
                                 <DropdownMenuItem
-                                    className="p-3 cursor-pointer"
+                                    className="p-3 cursor-pointer text-sm font-medium"
                                     onClick={() => signOut()}>
-                                    <LogOut className="mr-2 size-4" />
-                                    <span className="text-sm font-medium">
-                                        Sign out
-                                    </span>
+                                    <LogOut className="mr-2 size-4 opacity-60" />
+                                    Sign out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
                 </header>
 
-                <main className="flex-1">
-                    <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full">
+                <main className="flex-1 overflow-y-auto">
+                    <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full transition-all">
                         {children}
                     </div>
                 </main>
