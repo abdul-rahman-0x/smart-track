@@ -5,11 +5,11 @@ import { subscriptions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 
-const stripe = new Stripe(
-    process.env.STRIPE_API_KEY || "sk_test_dummy_key_for_build",
-);
+const stripeApiKey = process.env.STRIPE_API_KEY;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-// --- STRICT INTERFACES ---
+const stripe = new Stripe(stripeApiKey || "");
+
 interface StripeSubscription {
     id: string;
     customer: string;
@@ -25,9 +25,7 @@ interface StripeSubscription {
 }
 
 interface StripeCheckoutSession {
-    id: string;
     subscription: string | null;
-    customer: string | null;
     metadata: {
         userId?: string;
     } | null;
@@ -37,22 +35,21 @@ interface StripeInvoice {
     subscription: string | null;
 }
 
-// --- HELPER: SAFE DATE CONVERSION ---
-const toSafeDate = (unixTimestamp: number | undefined | null): Date => {
-    if (!unixTimestamp || isNaN(unixTimestamp)) {
-        console.error("❌ Invalid timestamp received:", unixTimestamp);
-        // Fallback to 30 days from now if Stripe fails to provide a date
-        return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    }
-    return new Date(unixTimestamp * 1000);
+const toSafeDate = (unixTimestamp: number | undefined | null): Date | null => {
+    if (!unixTimestamp || !Number.isFinite(unixTimestamp) || unixTimestamp <= 0)
+        return null;
+    const date = new Date(unixTimestamp * 1000);
+    return Number.isNaN(date.getTime()) ? null : date;
 };
 
 export async function POST(req: Request) {
     const body = await req.text();
     const signature = (await headers()).get("Stripe-Signature");
 
-    if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
-        return new NextResponse("Security Config Missing", { status: 400 });
+    if (!stripeApiKey || !stripeWebhookSecret || !signature) {
+        return new NextResponse("Security Configuration Missing", {
+            status: 400,
+        });
     }
 
     let event: Stripe.Event;
@@ -61,42 +58,36 @@ export async function POST(req: Request) {
         event = stripe.webhooks.constructEvent(
             body,
             signature,
-            process.env.STRIPE_WEBHOOK_SECRET,
+            stripeWebhookSecret,
         );
-    } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        return new NextResponse(`Webhook Error: ${msg}`, { status: 400 });
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : "Unknown Error";
+        console.error("❌ Webhook Verification Failed:", msg);
+        return new NextResponse("Webhook Error", { status: 400 });
     }
 
     try {
-        // --- CASE 1: INITIAL PURCHASE ---
         if (event.type === "checkout.session.completed") {
             const session = event.data
                 .object as unknown as StripeCheckoutSession;
             const userId = session.metadata?.userId;
             const subscriptionId = session.subscription;
 
-            if (!userId || !subscriptionId) {
-                console.error(
-                    "❌ Webhook Error: Missing userId or subscriptionId",
-                );
+            if (!userId || !subscriptionId)
                 return new NextResponse(null, { status: 200 });
-            }
 
-            // Fetch the subscription to get the period end and price ID
-            const subData = await stripe.subscriptions.retrieve(subscriptionId);
-            const subscription = subData as unknown as StripeSubscription;
-
+            const stripeSub =
+                await stripe.subscriptions.retrieve(subscriptionId);
+            const subscription = stripeSub as unknown as StripeSubscription;
             const expiryDate = toSafeDate(subscription.current_period_end);
-            console.log(
-                `⏳ Expiry calculated for ${userId}:`,
-                expiryDate.toISOString(),
-            );
+
+            if (!expiryDate)
+                return new NextResponse("Invalid Expiry", { status: 500 });
 
             await db
                 .insert(subscriptions)
                 .values({
-                    userId: userId,
+                    userId,
                     stripeCustomerId: subscription.customer,
                     stripeSubscriptionId: subscription.id,
                     stripePriceId: subscription.items.data[0].price.id,
@@ -107,27 +98,26 @@ export async function POST(req: Request) {
                     target: subscriptions.userId,
                     set: {
                         stripeSubscriptionId: subscription.id,
-                        stripePriceId: subscription.items.data[0].price.id,
                         status: subscription.status,
                         currentPeriodEnd: expiryDate,
                         updatedAt: new Date(),
                     },
                 });
-
-            console.log(`✅ Neon DB Synced for user: ${userId}`);
+            console.log(`✅ Provisioned Pro for: ${userId}`);
         }
 
-        // --- CASE 2: SUCCESSFUL RENEWAL ---
         if (event.type === "invoice.payment_succeeded") {
             const invoice = event.data.object as unknown as StripeInvoice;
-            const subscriptionId = invoice.subscription;
+            if (!invoice.subscription)
+                return new NextResponse(null, { status: 200 });
 
-            if (subscriptionId) {
-                const subData =
-                    await stripe.subscriptions.retrieve(subscriptionId);
-                const subscription = subData as unknown as StripeSubscription;
-                const expiryDate = toSafeDate(subscription.current_period_end);
+            const stripeSub = await stripe.subscriptions.retrieve(
+                invoice.subscription,
+            );
+            const subscription = stripeSub as unknown as StripeSubscription;
+            const expiryDate = toSafeDate(subscription.current_period_end);
 
+            if (expiryDate) {
                 await db
                     .update(subscriptions)
                     .set({
@@ -136,18 +126,15 @@ export async function POST(req: Request) {
                         updatedAt: new Date(),
                     })
                     .where(
-                        eq(subscriptions.stripeSubscriptionId, subscriptionId),
+                        eq(subscriptions.stripeSubscriptionId, subscription.id),
                     );
-
-                console.log(
-                    `💳 Invoice Paid. New Expiry: ${expiryDate.toISOString()}`,
-                );
+                console.log(`💳 Renewal Success: ${subscription.id}`);
             }
         }
 
         return new NextResponse(null, { status: 200 });
-    } catch (error) {
-        console.error("❌ WEBHOOK CRITICAL FAILURE:", error);
+    } catch (err) {
+        console.error("❌ Webhook Logic Failure:", err);
         return new NextResponse("Internal Server Error", { status: 500 });
     }
 }
