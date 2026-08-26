@@ -1,59 +1,48 @@
-import React from "react";
-import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { tasks } from "@/db/schema";
+import { tasks, exams } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { PlannerClient } from "./planner-client";
+import { getSubscriptionPlan } from "@/lib/subscription";
 
-interface PageProps {
+export default async function PlannerPage({
+    searchParams,
+}: {
     searchParams: Promise<{ date?: string }>;
-}
-
-export default async function PlannerPage({ searchParams }: PageProps) {
+}) {
     const session = await auth();
     if (!session?.user?.id) redirect("/login");
 
-    const resolvedParams = await searchParams;
-    const rawDate = resolvedParams.date;
+    const { date } = await searchParams;
+    const selectedDate = date ? new Date(date) : new Date();
 
-    // 1. Resolve selected date (default to today if missing or invalid)
-    let selectedDate = new Date();
-    if (rawDate) {
-        const parsed = new Date(rawDate);
-        if (!isNaN(parsed.getTime())) {
-            selectedDate = parsed;
-        }
-    }
+    const start = new Date(selectedDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(selectedDate);
+    end.setHours(23, 59, 59, 999);
 
-    // 2. Calculate boundary dates for the current week (Monday to Sunday)
-    const currentDayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday etc.
-    const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
-
-    const mondayDate = new Date(selectedDate);
-    mondayDate.setDate(selectedDate.getDate() + distanceToMonday);
-    mondayDate.setHours(0, 0, 0, 0);
-
-    const sundayDate = new Date(mondayDate);
-    sundayDate.setDate(mondayDate.getDate() + 6);
-    sundayDate.setHours(23, 59, 59, 999);
-
-    // 3. Load all tasks created by the user for the active week
-    const userTasks = await db
-        .select()
-        .from(tasks)
-        .where(
-            and(
-                eq(tasks.userId, session.user.id),
-                gte(tasks.dueDate, mondayDate),
-                lte(tasks.dueDate, sundayDate),
+    const [userTasks, userExams, sub] = await Promise.all([
+        db
+            .select()
+            .from(tasks)
+            .where(
+                and(
+                    eq(tasks.userId, session.user.id),
+                    gte(tasks.dueDate, start),
+                    lte(tasks.dueDate, end),
+                ),
             ),
-        );
+        db.select().from(exams).where(eq(exams.userId, session.user.id)),
+        getSubscriptionPlan(),
+    ]);
 
     return (
         <PlannerClient
-            selectedDateStr={selectedDate.toISOString().split("T")[0]}
             initialTasks={userTasks}
+            exams={userExams}
+            isPro={sub.isPro}
+            selectedDateStr={selectedDate.toISOString().split("T")[0]}
         />
     );
 }
