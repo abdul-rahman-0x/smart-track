@@ -4,9 +4,16 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { exams, tasks } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
+import { getSubscriptionPlan } from "@/lib/subscription";
+import { z } from "zod";
 
-// Action 1: Create a new academic exam
+const examSchema = z.object({
+    subject: z.string().min(1).max(50),
+    dateStr: z.string(),
+    notes: z.string().max(200).optional(),
+});
+
 export async function createExam(
     subject: string,
     dateStr: string,
@@ -15,34 +22,40 @@ export async function createExam(
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
-    const examDate = new Date(dateStr);
-    examDate.setHours(12, 0, 0, 0); // Normalize timezone offset
+    const validated = examSchema.parse({ subject, dateStr, notes });
+    const sub = await getSubscriptionPlan();
+
+    if (!sub.isPro) {
+        const [existing] = await db
+            .select({ val: count() })
+            .from(exams)
+            .where(eq(exams.userId, session.user.id));
+        if (existing.val >= 3) throw new Error("PRO_LIMIT_REACHED");
+    }
+
+    const examDate = new Date(validated.dateStr);
+    examDate.setHours(12, 0, 0, 0);
 
     await db.insert(exams).values({
-        subject,
+        subject: validated.subject,
         date: examDate,
-        notes: notes || null,
+        notes: validated.notes || null,
         userId: session.user.id,
     });
 
     revalidatePath("/exams");
-    revalidatePath("/dashboard");
 }
 
-// Action 2: Delete an exam
 export async function deleteExam(examId: string) {
     const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
+    if (!session?.user?.id) return;
 
     await db
         .delete(exams)
         .where(and(eq(exams.id, examId), eq(exams.userId, session.user.id)));
-
     revalidatePath("/exams");
-    revalidatePath("/dashboard");
 }
 
-// Action 3: Add a syllabus sub-chapter or topic (Stored in tasks with special exam prefix)
 export async function addSyllabusTopic(
     examId: string,
     title: string,
