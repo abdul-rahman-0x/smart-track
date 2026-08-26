@@ -10,7 +10,6 @@ import {
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "next-auth/adapters";
 
-// --- CORE USER & AUTH ---
 export const users = pgTable("user", {
     id: text("id")
         .primaryKey()
@@ -68,7 +67,6 @@ export const subscriptions = pgTable("subscriptions", {
     }).notNull(),
 });
 
-// --- HABITS ---
 export const habits = pgTable("habit", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
@@ -88,7 +86,6 @@ export const habitCompletions = pgTable("habit_completion", {
     completedAt: timestamp("completed_at", { mode: "date" }).notNull(),
 });
 
-// --- EXAMS & PLANNER ---
 export const exams = pgTable("exam", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
@@ -115,7 +112,6 @@ export const tasks = pgTable("task", {
     }),
 });
 
-// --- RELATIONS ---
 export const usersRelations = relations(users, ({ many }) => ({
     habits: many(habits),
     exams: many(exams),
