@@ -4,111 +4,68 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
+import { getSubscriptionPlan } from "@/lib/subscription";
+import { z } from "zod";
 
-// Action 1: Create a planner item (either a daily task, prioritized task, or hourly block)
-export async function createPlannerTask({
-  title,
-  dueDateStr,
-  priority = "medium",
-}: {
-  title: string;
-  dueDateStr: string;
-  priority?: "low" | "medium" | "high";
-}) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+const taskSchema = z.object({
+    title: z.string().min(1).max(100),
+    priority: z.enum(["low", "medium", "high"]),
+    dueDateStr: z.string(),
+});
 
-  const dueDate = new Date(dueDateStr);
-  dueDate.setHours(12, 0, 0, 0); // Normalize to avoid timezone shifting
+export async function createPlannerTask(values: z.infer<typeof taskSchema>) {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
 
-  await db.insert(tasks).values({
-    title,
-    userId: session.user.id,
-    completed: false,
-    dueDate,
-    priority,
-  });
+    const { title, priority, dueDateStr } = taskSchema.parse(values);
+    const sub = await getSubscriptionPlan();
 
-  revalidatePath("/planner");
-  revalidatePath("/dashboard");
+    if (!sub.isPro) {
+        const [existing] = await db
+            .select({ val: count() })
+            .from(tasks)
+            .where(
+                and(
+                    eq(tasks.userId, session.user.id),
+                    eq(tasks.completed, false),
+                ),
+            );
+        if (existing.val >= 10) throw new Error("PRO_LIMIT_REACHED");
+    }
+
+    const dueDate = new Date(dueDateStr);
+    dueDate.setHours(12, 0, 0, 0);
+
+    await db.insert(tasks).values({
+        title,
+        userId: session.user.id,
+        priority,
+        dueDate,
+    });
+
+    revalidatePath("/planner");
 }
 
-// Action 2: Toggle task completion status
 export async function toggleTask(taskId: string, completed: boolean) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+    const session = await auth();
+    if (!session?.user?.id) return;
 
-  await db
-    .update(tasks)
-    .set({ completed })
-    .where(and(eq(tasks.id, taskId), eq(tasks.userId, session.user.id)));
+    await db
+        .update(tasks)
+        .set({ completed })
+        .where(and(eq(tasks.id, taskId), eq(tasks.userId, session.user.id)));
 
-  revalidatePath("/planner");
-  revalidatePath("/dashboard");
+    revalidatePath("/planner");
 }
 
-// Action 3: Delete a single task
 export async function deleteTask(taskId: string) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+    const session = await auth();
+    if (!session?.user?.id) return;
 
-  await db
-    .delete(tasks)
-    .where(and(eq(tasks.id, taskId), eq(tasks.userId, session.user.id)));
+    await db
+        .delete(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.userId, session.user.id)));
 
-  revalidatePath("/planner");
-  revalidatePath("/dashboard");
-}
-
-// Action 4: Clear all tasks for a specific day
-export async function clearDayTasks(dateStr: string) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-
-  const targetDate = new Date(dateStr);
-  targetDate.setHours(0, 0, 0, 0);
-
-  const startOfDay = new Date(targetDate);
-  const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
-
-  await db
-    .delete(tasks)
-    .where(
-      and(
-        eq(tasks.userId, session.user.id),
-        gte(tasks.dueDate, startOfDay),
-        lte(tasks.dueDate, endOfDay)
-      )
-    );
-
-  revalidatePath("/planner");
-  revalidatePath("/dashboard");
-}
-
-// Action 5: Clear all tasks for the active week
-export async function clearWeekTasks(mondayStr: string) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-
-  const mondayDate = new Date(mondayStr);
-  mondayDate.setHours(0, 0, 0, 0);
-
-  const sundayDate = new Date(mondayDate);
-  sundayDate.setDate(mondayDate.getDate() + 6);
-  sundayDate.setHours(23, 59, 59, 999);
-
-  await db
-    .delete(tasks)
-    .where(
-      and(
-        eq(tasks.userId, session.user.id),
-        gte(tasks.dueDate, mondayDate),
-        lte(tasks.dueDate, sundayDate)
-      )
-    );
-
-  revalidatePath("/planner");
-  revalidatePath("/dashboard");
+    revalidatePath("/planner");
 }
