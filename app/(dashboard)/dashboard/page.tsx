@@ -2,257 +2,360 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { tasks, exams, syllabusItems, habitCompletions, habits } from "@/db/schema";
+import { tasks, exams, habitCompletions, habits } from "@/db/schema";
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Calendar, BookOpen, ArrowRight, CheckCircle2, ListTodo, GraduationCap, Activity } from "lucide-react";
+import {
+    ArrowRight,
+    CheckCircle2,
+    ListTodo,
+    GraduationCap,
+    Flame,
+    Target,
+    Zap,
+    Timer,
+    LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getSubscriptionPlan } from "@/lib/subscription";
-import { TierBadge } from "@/components/ui/tier-badge";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 export default async function DashboardPage() {
     const session = await auth();
     const userId = session?.user?.id;
     if (!userId) redirect("/login");
 
-    const { isPro } = await getSubscriptionPlan();
-
-    // --- DATE LOGIC ---
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // --- DATA FETCHING ---
-    const upcomingExamsList = await db.query.exams.findMany({
-        where: and(eq(exams.userId, userId), gte(exams.date, today)),
-        orderBy: [asc(exams.date)],
-        limit: 3,
-    });
+    const [upcomingExams, allTodayTasks, userHabits, todayCompletions] =
+        await Promise.all([
+            db.query.exams.findMany({
+                where: and(eq(exams.userId, userId), gte(exams.date, today)),
+                orderBy: [asc(exams.date)],
+                limit: 2,
+            }),
+            db
+                .select()
+                .from(tasks)
+                .where(
+                    and(
+                        eq(tasks.userId, userId),
+                        gte(tasks.dueDate, today),
+                        lte(tasks.dueDate, endOfDay),
+                    ),
+                ),
+            db.query.habits.findMany({
+                where: eq(habits.userId, userId),
+                orderBy: [desc(habits.streak)],
+                limit: 3,
+            }),
+            db
+                .select()
+                .from(habitCompletions)
+                .where(
+                    and(
+                        gte(habitCompletions.completedAt, today),
+                        lte(habitCompletions.completedAt, endOfDay),
+                    ),
+                ),
+        ]);
 
-    const nextExam = upcomingExamsList[0];
-    let daysRemaining: number | null = null;
-    if (nextExam) {
-        const examDate = new Date(nextExam.date);
-        examDate.setHours(0, 0, 0, 0);
-        daysRemaining = Math.ceil((examDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    }
+    const activeTasks = allTodayTasks.filter((t) => !t.completed);
+    const taskCompletionRate =
+        allTodayTasks.length > 0
+            ? Math.round(
+                  (allTodayTasks.filter((t) => t.completed).length /
+                      allTodayTasks.length) *
+                      100,
+              )
+            : 0;
 
-    const allSyllabusItems = await db.select().from(syllabusItems).innerJoin(exams, eq(syllabusItems.examId, exams.id)).where(eq(exams.userId, userId));
-    const syllabusProgress = allSyllabusItems.length > 0 ? Math.round((allSyllabusItems.filter(i => i.syllabus_item.completed).length / allSyllabusItems.length) * 100) : 0;
+    const habitCompletionRate =
+        userHabits.length > 0
+            ? Math.round(
+                  (userHabits.filter((h) =>
+                      todayCompletions.some((c) => c.habitId === h.id),
+                  ).length /
+                      userHabits.length) *
+                      100,
+              )
+            : 0;
 
-    const allTodayTasks = await db.select().from(tasks).where(and(eq(tasks.userId, userId), gte(tasks.dueDate, today), lte(tasks.dueDate, endOfDay)));
-    const todayUserTasks = allTodayTasks.filter(t => !t.title.startsWith("[FOCUS]"));
-    const taskProgressPercentage = todayUserTasks.length > 0 ? Math.round((todayUserTasks.filter(t => t.completed).length / todayUserTasks.length) * 100) : 0;
+    const nextExam = upcomingExams[0];
+    const daysToExam = nextExam
+        ? Math.ceil(
+              (new Date(nextExam.date).getTime() - today.getTime()) /
+                  (1000 * 60 * 60 * 24),
+          )
+        : null;
 
-    const userHabits = await db.query.habits.findMany({ where: eq(habits.userId, userId), orderBy: [desc(habits.streak)], limit: 4 });
-    const todayCompletions = await db.select().from(habitCompletions).where(and(gte(habitCompletions.completedAt, today), lte(habitCompletions.completedAt, endOfDay)));
-    const habitsProgressPercentage = userHabits.length > 0 ? Math.round((userHabits.filter(h => todayCompletions.some(c => c.habitId === h.id)).length / userHabits.length) * 100) : 0;
-
-    // --- SHARED UI CLASSES (Task 2: Elevated Depth) ---
-    const cardStyles = "border border-stone-200/60 dark:border-stone-800/60 bg-white dark:bg-stone-900/50 ring-1 ring-black/5 dark:ring-white/5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)] transition-all duration-300 shadow-md";
-
-    const displayName = session?.user?.name?.split(" ")[0] || "User";
+    const firstName = session?.user?.name?.split(" ")[0] || "User";
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto px-4 md:px-0">
-            {/* Header Section */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-100 dark:border-stone-800 pb-8">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white">
-                            Welcome back, {displayName}
-                        </h2>
-                        <TierBadge isPro={isPro} />
-                    </div>
-                    <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
-                        {today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+        <div className="max-w-6xl mx-auto space-y-10 pb-20 px-4 md:px-8 pt-6">
+            <header className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-border pb-6">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                        Welcome back, {firstName}
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Here is your overview for today.
                     </p>
                 </div>
+                <div className="text-sm font-medium text-muted-foreground bg-muted/50 px-3.5 py-1.5 rounded-full border border-border/60 w-fit">
+                    {format(today, "EEEE, MMMM do")}
+                </div>
+            </header>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                    label="Task Completion"
+                    value={`${taskCompletionRate}%`}
+                    icon={Target}
+                    color="text-emerald-600 dark:text-emerald-400"
+                />
+                <MetricCard
+                    label="Habit Progress"
+                    value={`${habitCompletionRate}%`}
+                    icon={Flame}
+                    color="text-amber-600 dark:text-amber-400"
+                />
+                <MetricCard
+                    label="Focus Time"
+                    value="Not tracked"
+                    icon={Timer}
+                    color="text-zinc-500"
+                />
+                <MetricCard
+                    label="Days to Exam"
+                    value={daysToExam !== null ? `${daysToExam}d` : "None"}
+                    icon={GraduationCap}
+                    color="text-rose-600 dark:text-rose-400"
+                />
             </div>
 
-            {/* Metrics Grid */}
-            <div className="grid gap-6 sm:grid-cols-3">
-                <Card className={cardStyles}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">Focus State</CardTitle>
-                        <div className="p-1.5 rounded-lg bg-orange-500/10"><Clock className="h-4 w-4 text-orange-500" /></div>
-                    </CardHeader>
-                    <CardContent className="pt-2">
-                        <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">0.0 Hours Focused</div>
-                        <p className="text-[10px] font-medium text-stone-400 mt-1 italic">Consistency is the key to mastery.</p>
-                    </CardContent>
-                </Card>
-
-                <Card className={cardStyles}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">Syllabus Progress</CardTitle>
-                        <div className="p-1.5 rounded-lg bg-emerald-500/10"><BookOpen className="h-4 w-4 text-emerald-500" /></div>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-2">
-                        <div className="text-2xl font-bold text-emerald-500">{syllabusProgress}%</div>
-                        <div className="flex gap-1">
-                            {Array.from({ length: 15 }).map((_, i) => (
-                                <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-700 ${syllabusProgress >= (i + 1) * 6.6 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-stone-100 dark:bg-stone-800"}`} />
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className={cardStyles}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">Next Milestone</CardTitle>
-                        <div className="p-1.5 rounded-lg bg-indigo-500/10"><Calendar className="h-4 w-4 text-indigo-500" /></div>
-                    </CardHeader>
-                    <CardContent className="pt-2">
-                        {nextExam ? (
-                            <div className="space-y-1">
-                                <div className="text-md font-bold truncate text-stone-900 dark:text-stone-100">{nextExam.subject}</div>
-                                <p className="text-[11px] font-bold text-rose-500 uppercase tracking-wide">{daysRemaining === 0 ? "Due Today" : `${daysRemaining}d remaining`}</p>
+            <div className="grid lg:grid-cols-3 gap-10 items-start">
+                <div className="lg:col-span-2 space-y-4">
+                    <SectionHeader
+                        title="Today's Agenda"
+                        icon={ListTodo}
+                        href="/planner"
+                    />
+                    <div className="border border-border bg-card rounded-lg overflow-hidden shadow-xs">
+                        {activeTasks.length > 0 ? (
+                            <div className="divide-y divide-border/60">
+                                {activeTasks.map((task) => (
+                                    <div
+                                        key={task.id}
+                                        className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors group">
+                                        <div className="size-4 rounded-full border border-muted-foreground/30 flex items-center justify-center text-transparent group-hover:border-primary/50 group-hover:text-primary/30 transition-all">
+                                            <span className="size-1.5 rounded-full bg-foreground/15 group-hover:bg-primary transition-colors" />
+                                        </div>
+                                        <span className="text-sm font-medium text-foreground/90 flex-1">
+                                            {task.title
+                                                .replace(/\[.*?\]/g, "")
+                                                .trim()}
+                                        </span>
+                                        {task.priority && (
+                                            <span
+                                                className={cn(
+                                                    "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                                    task.priority.toLowerCase() ===
+                                                        "high"
+                                                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                                        : task.priority.toLowerCase() ===
+                                                            "medium"
+                                                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                                          : "bg-muted text-muted-foreground",
+                                                )}>
+                                                {task.priority.toLowerCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <Link href="/exams" className="text-xs font-bold text-stone-400 flex items-center gap-1 hover:text-stone-900 dark:hover:text-stone-100 transition-colors pt-1">Setup your first exam <ArrowRight className="w-3.5 h-3.5" /></Link>
+                            <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+                                <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-600 mb-3">
+                                    <CheckCircle2 className="size-5" />
+                                </div>
+                                <h3 className="text-sm font-medium text-foreground">
+                                    All caught up for today
+                                </h3>
+                                <p className="text-xs text-muted-foreground max-w-xs mt-1">
+                                    Your priorities are clear. Stay focused on
+                                    your routines and upcoming goals.
+                                </p>
+                            </div>
                         )}
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Work Activity Section */}
-            <Card className={cn(cardStyles, "p-8 rounded-[2rem]")}>
-                <div className="grid gap-12 md:grid-cols-5 items-center">
-                    <div className="md:col-span-3 space-y-6">
-                        <div className="space-y-2">
-                            <h4 className="font-sans text-[10px] font-bold uppercase tracking-[0.15em] text-orange-500">Analytics</h4>
-                            <h3 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-white">Continuous progression flow</h3>
-                        </div>
-                        <div className="grid gap-4 pt-2">
-                            <ActivityItem color="bg-orange-500" label="Habit Streaks" value={`${habitsProgressPercentage}%`} />
-                            <ActivityItem color="bg-indigo-500" label="Planner Tasks" value={`${taskProgressPercentage}%`} />
-                            <ActivityItem color="bg-emerald-500" label="Syllabus chapters" value={`${syllabusProgress}%`} />
-                        </div>
-                    </div>
-                    <div className="md:col-span-2 flex justify-center">
-                        <div className="relative w-48 h-48">
-                            {/* Circles remain same, but the parent has higher shadow depth */}
-                            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="38" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
-                                <circle cx="50" cy="50" r="38" className="stroke-orange-500 transition-all duration-1000" strokeWidth="5" fill="none" strokeDasharray="238" strokeDashoffset={238 - (238 * habitsProgressPercentage) / 100} strokeLinecap="round" />
-                                <circle cx="50" cy="50" r="30" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
-                                <circle cx="50" cy="50" r="30" className="stroke-indigo-500 transition-all duration-1000 delay-100" strokeWidth="5" fill="none" strokeDasharray="188" strokeDashoffset={188 - (188 * taskProgressPercentage) / 100} strokeLinecap="round" />
-                                <circle cx="50" cy="50" r="22" className="stroke-stone-100 dark:stroke-stone-800" strokeWidth="5" fill="none" />
-                                <circle cx="50" cy="50" r="22" className="stroke-emerald-500 transition-all duration-1000 delay-200" strokeWidth="5" fill="none" strokeDasharray="138" strokeDashoffset={138 - (138 * syllabusProgress) / 100} strokeLinecap="round" />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center text-stone-300 dark:text-stone-700 opacity-40"><Activity size={24} /></div>
-                        </div>
                     </div>
                 </div>
-            </Card>
 
-            {/* Bottom Row: Priority and Timeline */}
-            <div className="grid gap-6 md:grid-cols-3 pb-12 items-start">
-                {/* 1. Priority Agenda Card */}
-                <Card className={cn(cardStyles, "md:col-span-2 p-6 rounded-3xl flex flex-col h-[300px] overflow-hidden")}>
-                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 mb-2 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <ListTodo className="w-4 h-4 text-emerald-500" />
-                            <h4 className="font-sans font-bold text-[10px] uppercase tracking-[0.15em] text-stone-400">Priority Agenda</h4>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                            className="h-6 px-2 text-[9px] font-bold text-stone-400 hover:text-stone-900 dark:hover:text-stone-50 transition-colors"
-                        >
-                            <Link href="/planner">View All</Link>
-                        </Button>
-                    </div>
-
-                    <div className="overflow-y-auto pr-2 custom-scrollbar scroll-mask flex-1 py-4">
-                        <div className="space-y-1">
-                            {todayUserTasks.length > 0 ? todayUserTasks.map((t) => (
-                                <div key={t.id} className="flex items-start gap-3 py-2.5 px-2 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors group">
-                                    <CheckCircle2 className={cn(
-                                        "w-4 h-4 mt-0.5 shrink-0 transition-all",
-                                        t.completed ? "text-emerald-500" : "text-stone-200 dark:text-stone-800 group-hover:text-stone-300"
-                                    )} />
-                                    <span className={cn(
-                                        "text-xs font-medium transition-all line-clamp-1 leading-snug",
-                                        t.completed ? "line-through text-stone-400" : "text-stone-700 dark:text-stone-300"
-                                    )}>
-                                        {t.title}
-                                    </span>
-                                </div>
-                            )) : (
-                                <div className="h-full flex items-center justify-center py-12">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-300 dark:text-stone-700">Empty Agenda</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </Card>
-
-                {/* 2. Upcoming Exams Card - Now with View All Button */}
-                <Card className={cn(cardStyles, "p-6 rounded-3xl flex flex-col h-[300px] overflow-hidden")}>
-                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 mb-2 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-indigo-500" />
-                            <h4 className="font-sans font-bold text-[10px] uppercase tracking-[0.15em] text-stone-400">Upcoming Exams</h4>
-                        </div>
-                        {/* Added: Symmetric Navigation Button */}
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                            className="h-6 px-2 text-[9px] font-bold text-stone-400 hover:text-stone-900 dark:hover:text-stone-50 transition-colors"
-                        >
-                            <Link href="/exams">View All</Link>
-                        </Button>
-                    </div>
-
-                    <div className="overflow-y-auto pr-2 custom-scrollbar scroll-mask flex-1 py-4">
+                <div className="space-y-8">
+                    <div className="space-y-4">
+                        <SectionHeader
+                            title="Daily Habits"
+                            icon={Zap}
+                            href="/habits"
+                        />
                         <div className="space-y-2">
-                            {upcomingExamsList.length > 0 ? upcomingExamsList.map((e) => (
-                                <div
-                                    key={e.id}
-                                    className={cn(
-                                        "flex flex-col gap-1 p-3 rounded-xl transition-all duration-200 shrink-0",
-                                        "bg-stone-100/40 dark:bg-stone-900/60",
-                                        "border border-stone-200/50 dark:border-stone-800/50",
-                                        "shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]",
-                                        "hover:bg-stone-100/60 dark:hover:bg-stone-800/80 hover:shadow-none"
-                                    )}
-                                >
-                                    <div className="text-[11px] font-bold truncate text-stone-900 dark:text-stone-100 line-clamp-1">
-                                        {e.subject}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[9px] font-bold text-stone-500 dark:text-stone-400 uppercase">
-                                            {new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                                        </span>
-                                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="h-full flex items-center justify-center py-12">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-300 dark:text-stone-700">No Exams</p>
+                            {userHabits.length > 0 ? (
+                                userHabits.map((habit) => {
+                                    const isDone = todayCompletions.some(
+                                        (c) => c.habitId === habit.id,
+                                    );
+                                    return (
+                                        <div
+                                            key={habit.id}
+                                            className={cn(
+                                                "flex items-center justify-between p-3.5 rounded-lg border transition-colors",
+                                                isDone
+                                                    ? "bg-muted/30 border-border/50"
+                                                    : "bg-card border-border hover:border-amber-500/30",
+                                            )}>
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="text-xs text-muted-foreground/60 font-mono tracking-tight">
+                                                    {habit.streak}d
+                                                </span>
+                                                <span
+                                                    className={cn(
+                                                        "text-sm font-medium",
+                                                        isDone
+                                                            ? "text-muted-foreground/70 line-through decoration-muted-foreground/30"
+                                                            : "text-foreground/90",
+                                                    )}>
+                                                    {habit.name}
+                                                </span>
+                                            </div>
+                                            <div
+                                                className={cn(
+                                                    "size-5 rounded-md border flex items-center justify-center transition-all",
+                                                    isDone
+                                                        ? "bg-amber-500 border-amber-500 text-white"
+                                                        : "bg-background border-border",
+                                                )}>
+                                                {isDone && (
+                                                    <CheckCircle2 className="size-3.5 stroke-[2.5]" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="p-6 rounded-lg border border-dashed border-border text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                        No habits tracked yet.
+                                    </p>
                                 </div>
                             )}
                         </div>
                     </div>
-                </Card>
+
+                    <div className="space-y-4">
+                        <SectionHeader
+                            title="Academic Roadmap"
+                            icon={GraduationCap}
+                            href="/exams"
+                        />
+                        {nextExam ? (
+                            <div className="p-4 rounded-lg border border-rose-500/10 bg-rose-500/5 space-y-3 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                    <GraduationCap size={48} />
+                                </div>
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                                            Upcoming Exam
+                                        </span>
+                                        <h4 className="text-sm font-semibold text-foreground mt-0.5">
+                                            {nextExam.subject}
+                                        </h4>
+                                    </div>
+                                    {daysToExam !== null && (
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                                            {daysToExam}{" "}
+                                            {daysToExam === 1 ? "day" : "days"}{" "}
+                                            left
+                                        </span>
+                                    )}
+                                </div>
+                                {nextExam.notes && (
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                        {nextExam.notes}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-border rounded-lg bg-muted/5">
+                                <GraduationCap className="size-5 text-muted-foreground/40 mb-2" />
+                                <h4 className="text-xs font-medium text-foreground">
+                                    No upcoming exams
+                                </h4>
+                                <p className="text-[11px] text-muted-foreground mt-1 max-w-50">
+                                    Keep your study schedule updated by planning
+                                    your next exams.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
-// Sub-component for clean mapping
-const ActivityItem = ({ color, label, value }: { color: string; label: string; value: string }) => (
-    <div className="flex items-center justify-between group">
-        <div className="flex items-center gap-3">
-            <div className={cn("w-2 h-2 rounded-full", color)} />
-            <span className="font-bold text-[12px] text-stone-500 dark:text-stone-400 transition-colors tracking-[0.10em]">{label}</span>
+const MetricCard = ({
+    label,
+    value,
+    icon: Icon,
+    color,
+}: {
+    label: string;
+    value: string;
+    icon: LucideIcon;
+    color: string;
+}) => (
+    <div className="rounded-lg border border-border bg-card p-4 flex items-start justify-between shadow-xs hover:border-border/80 transition-colors">
+        <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground block">
+                {label}
+            </span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground block">
+                {value}
+            </span>
         </div>
-        <span className="text-xs font-bold text-stone-900 dark:text-stone-100">{value}</span>
+        <Icon className={cn("size-4 mt-1", color)} />
+    </div>
+);
+
+const SectionHeader = ({
+    title,
+    icon: Icon,
+    href,
+}: {
+    title: string;
+    icon: LucideIcon;
+    href: string;
+}) => (
+    <div className="flex items-center justify-between pb-1">
+        <div className="flex items-center gap-2">
+            <Icon className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        </div>
+        <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="h-7 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group">
+            <Link href={href} className="flex items-center gap-1">
+                View all{" "}
+                <ArrowRight
+                    size={12}
+                    className="opacity-70 group-hover:translate-x-0.5 transition-transform"
+                />
+            </Link>
+        </Button>
     </div>
 );
