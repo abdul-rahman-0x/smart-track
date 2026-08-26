@@ -4,12 +4,13 @@ import {
     timestamp,
     integer,
     boolean,
-    primaryKey,
     uuid,
+    primaryKey,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "next-auth/adapters";
 
-// --- AUTH.JS V5 STANDARD TABLES ---
+// --- CORE USER & AUTH ---
 export const users = pgTable("user", {
     id: text("id")
         .primaryKey()
@@ -54,7 +55,6 @@ export const sessions = pgTable("session", {
     expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
-// --- STRIPE BILLING & SUBSCRIPTION SCHEMA ---
 export const subscriptions = pgTable("subscriptions", {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: text("user_id")
@@ -62,25 +62,20 @@ export const subscriptions = pgTable("subscriptions", {
         .references(() => users.id, { onDelete: "cascade" })
         .unique(),
     stripeCustomerId: text("stripe_customer_id").notNull().unique(),
-    stripeSubscriptionId: text("stripe_subscription_id").unique(),
-    stripePriceId: text("stripe_price_id"),
     status: text("status").notNull(),
     currentPeriodEnd: timestamp("current_period_end", {
         mode: "date",
     }).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// --- UPGRADED SMART-TRACK HABITS SCHEMAS ---
+// --- HABITS ---
 export const habits = pgTable("habit", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    // FIXED: Explicitly added the missing category column inside your schema
-    category: text("category").default("vitality").notNull(),
+    category: text("category").default("general").notNull(),
     streak: integer("streak").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -93,6 +88,7 @@ export const habitCompletions = pgTable("habit_completion", {
     completedAt: timestamp("completed_at", { mode: "date" }).notNull(),
 });
 
+// --- EXAMS & PLANNER ---
 export const exams = pgTable("exam", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("userId")
@@ -119,12 +115,13 @@ export const tasks = pgTable("task", {
     }),
 });
 
-export const syllabusItems = pgTable("syllabus_item", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    title: text("title").notNull(),
-    completed: boolean("completed").default(false).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    examId: uuid("exam_id")
-        .notNull()
-        .references(() => exams.id, { onDelete: "cascade" }),
-});
+// --- RELATIONS ---
+export const usersRelations = relations(users, ({ many }) => ({
+    habits: many(habits),
+    exams: many(exams),
+}));
+
+export const habitsRelations = relations(habits, ({ one, many }) => ({
+    user: one(users, { fields: [habits.userId], references: [users.id] }),
+    completions: many(habitCompletions),
+}));
