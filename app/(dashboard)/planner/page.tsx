@@ -21,8 +21,7 @@ export default async function PlannerPage({
     start.setHours(0, 0, 0, 0);
     const end = new Date(selectedDate);
     end.setHours(23, 59, 59, 999);
-
-    const [userTasks, userExams, sub] = await Promise.all([
+    const [rawTasks, userExams, sub] = await Promise.all([
         db
             .select()
             .from(tasks)
@@ -36,6 +35,11 @@ export default async function PlannerPage({
         db.select().from(exams).where(eq(exams.userId, session.user.id)),
         getSubscriptionPlan(),
     ]);
+
+    const userTasks = rawTasks.map((task) => ({
+        ...task,
+        priority: task.priority as "low" | "medium" | "high",
+    }));
 
     return (
         <PlannerClient
