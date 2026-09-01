@@ -1,4 +1,3 @@
-// components/landing/footer.tsx
 import React from "react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
@@ -6,14 +5,14 @@ import { Button } from "@/components/ui/button";
 
 const footerLinks = {
     resources: [
-        { name: "Sign In", href: "/login" },
+        { name: "Sign in", href: "/login" },
         { name: "Dashboard", href: "/dashboard" },
         { name: "Planner", href: "/planner" },
         { name: "Billing", href: "/billing" },
     ],
-    socials: [
-        { name: "Twitter (X)", href: "https://x.com/_AbdulRahman09" },
-        { name: "LinkedIn", href: "https://linkedin.com/in/abdulrahman-in" },
+    legal: [
+        { name: "Terms of service", href: "/terms" },
+        { name: "Privacy policy", href: "/privacy" },
     ],
 };
 
@@ -21,7 +20,6 @@ export default function Footer() {
     return (
         <footer className="w-full pt-20">
             <div className="mx-auto max-w-5xl px-4">
-                {/* --- TOP CTA SECTION --- */}
                 <div className="flex flex-col items-center border-b border-stone-200/60 dark:border-stone-900/60 pb-20 text-center space-y-6">
                     <Logo className="h-10 w-auto" />
 
@@ -41,7 +39,6 @@ export default function Footer() {
                     </div>
                 </div>
 
-                {/* --- MAIN LINKS SECTION --- */}
                 <div className="flex flex-col md:flex-row justify-between items-start py-20 gap-12">
                     <div className="max-w-[280px] space-y-4">
                         <Logo className="h-7 w-auto" />
@@ -53,7 +50,6 @@ export default function Footer() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-16 md:gap-32">
-                        {/* Resources */}
                         <div className="space-y-5">
                             <h4 className="font-sans text-sm text-stone-900 dark:text-stone-50">
                                 Resources
@@ -71,13 +67,12 @@ export default function Footer() {
                             </ul>
                         </div>
 
-                        {/* Socials */}
                         <div className="space-y-5">
                             <h4 className="font-sans text-sm text-stone-900 dark:text-stone-50">
-                                Socials
+                                Legal
                             </h4>
                             <ul className="space-y-2">
-                                {footerLinks.socials.map((link) => (
+                                {footerLinks.legal.map((link) => (
                                     <li key={link.name}>
                                         <Link
                                             href={link.href}
@@ -91,20 +86,10 @@ export default function Footer() {
                     </div>
                 </div>
 
-                {/* --- BOTTOM BAR --- */}
                 <div className="flex flex-col items-center justify-between gap-6 border-t border-stone-200/60 dark:border-stone-900/60 py-14 md:flex-row">
                     <p className="text-xs text-stone-400">
                         © 2026 Smart Track. All rights reserved.
                     </p>
-
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-                        <span>Made by</span>
-                        <Link
-                            href="https://github.com/abdul-rahman-0x"
-                            className="font-semibold text-stone-900 dark:text-stone-50 transition-colors duration-300 hover:text-orange-500 cursor-pointer">
-                            Abdul Rahman
-                        </Link>
-                    </div>
                 </div>
             </div>
         </footer>
