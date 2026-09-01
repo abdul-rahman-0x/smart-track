@@ -24,6 +24,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -213,14 +214,29 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                                 align="end"
-                                className="w-56 rounded-xl border-zinc-200 dark:border-zinc-800 shadow-lg">
-                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 p-4">
-                                    Account
-                                </DropdownMenuLabel>
+                                className="w-56 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white dark:bg-zinc-950 p-1.5 shadow-lg">
+                                <div className="flex flex-col min-w-0 px-3 py-2.5">
+                                    <span className="text-sm font-semibold truncate text-zinc-900 dark:text-zinc-50 leading-none">
+                                        {user?.name}
+                                    </span>
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-1.5 leading-none">
+                                        {user?.email}
+                                    </span>
+                                </div>
+                                <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-900/50 my-1" />
                                 <DropdownMenuItem
-                                    className="p-3 cursor-pointer text-sm font-medium"
+                                    asChild
+                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-900/50 cursor-pointer text-xs font-medium transition-colors">
+                                    <Link href="/billing">
+                                        <Settings2 className="size-4 opacity-75" />
+                                        Account settings
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-900/50 my-1" />
+                                <DropdownMenuItem
+                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer text-xs font-medium transition-colors"
                                     onClick={() => signOut()}>
-                                    <LogOut className="mr-2 size-4 opacity-60" />
+                                    <LogOut className="size-4 opacity-75" />
                                     Sign out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
