@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-
 import {
     signInWithGoogle,
     type SignInActionState,
 } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
+import { Loader2, AlertCircle } from "lucide-react";
 
 const initialState: SignInActionState = {};
 
@@ -14,7 +14,7 @@ const GoogleIcon = () => (
     <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
-        className="size-4"
+        className="size-5 shrink-0"
         xmlns="http://www.w3.org/2000/svg">
         <path
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -38,27 +38,37 @@ const GoogleIcon = () => (
 export const LoginForm = () => {
     const [state, formAction, isPending] = useActionState(
         signInWithGoogle,
-        initialState
+        initialState,
     );
 
     return (
-        <form action={formAction} className="mt-8">
+        <form action={formAction} className="space-y-4">
             <Button
                 type="submit"
                 variant="outline"
                 size="lg"
-                className="w-full"
-                disabled={isPending}>
-                <GoogleIcon />
-                {isPending ? "Redirecting..." : "Continue with Google"}
+                disabled={isPending}
+                className="btn-tactile w-full h-12 border-border/90 bg-card hover:bg-secondary text-foreground text-sm font-semibold flex items-center justify-center gap-3 transition-all rounded-xl shadow-xs">
+                {isPending ? (
+                    <>
+                        <Loader2 className="size-4.5 animate-spin text-muted-foreground" />
+                        <span>Connecting with Google...</span>
+                    </>
+                ) : (
+                    <>
+                        <GoogleIcon />
+                        <span>Continue with Google</span>
+                    </>
+                )}
             </Button>
 
             {state.error ? (
-                <p
+                <div
                     role="alert"
-                    className="mt-4 text-center text-sm text-destructive">
-                    {state.error}
-                </p>
+                    className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center gap-2.5 text-xs text-destructive text-left">
+                    <AlertCircle className="size-4 shrink-0" />
+                    <span>{state.error}</span>
+                </div>
             ) : null}
         </form>
     );

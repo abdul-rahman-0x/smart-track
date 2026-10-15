@@ -181,7 +181,7 @@ export default async function BillingPage() {
                                     className="flex items-center gap-2.5 text-xs text-foreground/90 font-medium"
                                 >
                                     <div className="size-4 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                                        <Check className="size-2.5 text-emerald-500 stroke-[3]" />
+                                        <Check className="size-2.5 text-emerald-500 stroke-3" />
                                     </div>
                                     <span>{feature}</span>
                                 </div>

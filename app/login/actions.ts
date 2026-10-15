@@ -1,7 +1,6 @@
 "use server";
 
 import { AuthError } from "next-auth";
-
 import { signIn } from "@/auth";
 
 export type SignInActionState = {
@@ -10,8 +9,12 @@ export type SignInActionState = {
 
 export const signInWithGoogle = async (
     _prevState: SignInActionState,
-    _formData: FormData
+    _formData: FormData,
 ): Promise<SignInActionState> => {
+    // Explicitly consume to satisfy TypeScript/ESLint without disabling rules
+    void _prevState;
+    void _formData;
+
     try {
         await signIn("google", { redirectTo: "/dashboard" });
     } catch (error) {
