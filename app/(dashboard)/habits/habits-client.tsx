@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,12 +13,15 @@ import {
 import {
     Flame,
     Check,
-    Trash,
+    Trash2,
     Plus,
     ChevronLeft,
     ChevronRight,
     RotateCcw,
+    Calendar as CalendarIcon,
+    Sparkles,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Habit {
     id: string;
@@ -47,8 +49,11 @@ export function HabitsClient({
 }: HabitsClientProps) {
     const router = useRouter();
     const [newHabitName, setNewHabitName] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // --- Week Calculation ---
     const selectedDate = new Date(selectedDateStr);
+    const today = new Date();
 
     const currentDayOfWeek = selectedDate.getDay();
     const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
@@ -61,10 +66,18 @@ export function HabitsClient({
         return day;
     });
 
-    const weekRangeLabel = `Week of ${monday.toLocaleDateString("en-US", {
+    const isCurrentWeek = WEEK_DAYS.some(
+        (day) => day.toDateString() === today.toDateString()
+    );
+
+    const weekRangeLabel = `${monday.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-    })} - ${WEEK_DAYS[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    })} – ${WEEK_DAYS[6].toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    })}`;
 
     const handleNavigate = (direction: "prev" | "next") => {
         const nextDate = new Date(selectedDate);
@@ -74,12 +87,20 @@ export function HabitsClient({
         router.push(`/habits?date=${nextDate.toISOString().split("T")[0]}`);
     };
 
+    const handleJumpToCurrentWeek = () => {
+        router.push(`/habits?date=${today.toISOString().split("T")[0]}`);
+    };
+
     const handleAddHabit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newHabitName.trim()) return;
-        const name = newHabitName;
-        setNewHabitName("");
-        await createHabit(name);
+        if (!newHabitName.trim() || isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            await createHabit(newHabitName.trim());
+            setNewHabitName("");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleResetWeek = async () => {
@@ -92,153 +113,182 @@ export function HabitsClient({
     };
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto">
-            {/* Header Controller */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative space-y-8 pb-16 max-w-7xl mx-auto">
+            {/* Ambient Lighting */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-emerald-500/[0.03] blur-3xl pointer-events-none rounded-full" />
+
+            {/* --- HEADER: Title & Week Controller --- */}
+            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/80">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">
-                        Habit Tracker
-                    </h2>
-                    <p className="text-stone-500 dark:text-stone-400">
-                        Build routines that lead to success. Toggle completions
-                        across your weekly grid.
+                    <div className="flex items-center gap-2.5">
+                        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+                            Habit Tracker
+                        </h1>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
+                            <Flame className="size-3 fill-current" />
+                            Daily Streaks
+                        </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Build momentum through small daily repetitions.
                     </p>
                 </div>
 
-                {/* Weekly Navigation Controls & Reset Button */}
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleNavigate("prev")}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm font-semibold min-w-36 text-center">
-                        {weekRangeLabel}
-                    </span>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleNavigate("next")}>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
+                {/* Week Navigator */}
+                <div className="flex items-center gap-2.5">
+                    {!isCurrentWeek && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleJumpToCurrentWeek}
+                            className="h-8.5 text-xs border-border hover:bg-secondary">
+                            <CalendarIcon className="size-3.5 mr-1.5" />
+                            This Week
+                        </Button>
+                    )}
+
+                    <div className="flex items-center bg-card border border-border/80 rounded-lg p-0.5 card-elevation">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Previous week"
+                            onClick={() => handleNavigate("prev")}
+                            className="size-7.5 text-muted-foreground hover:text-foreground">
+                            <ChevronLeft className="size-4" />
+                        </Button>
+
+                        <span className="text-xs font-semibold px-3 text-foreground select-none tabular-nums">
+                            {weekRangeLabel}
+                        </span>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Next week"
+                            onClick={() => handleNavigate("next")}
+                            className="size-7.5 text-muted-foreground hover:text-foreground">
+                            <ChevronRight className="size-4" />
+                        </Button>
+                    </div>
+
                     <Button
                         variant="outline"
                         size="icon"
                         onClick={handleResetWeek}
-                        className="hover:text-red-500"
+                        className="size-8.5 border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         title="Reset this week's progress">
-                        <RotateCcw className="h-4 w-4" />
+                        <RotateCcw className="size-3.5" />
                     </Button>
                 </div>
             </div>
 
-            {/* Habits Grid Workspace Container */}
-            <Card className="border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 shadow-none overflow-hidden rounded-2xl">
-                {/* Symmetric Custom Header (Visible on Desktop only to prevent mobile crowding) */}
-                <div className="hidden md:grid grid-cols-10 gap-4 px-6 py-4 bg-stone-50/50 dark:bg-stone-950/20 border-b border-stone-100 dark:border-stone-800 text-xs font-semibold text-stone-400">
+            {/* --- HABITS WORKSPACE GRID --- */}
+            <div className="rounded-xl border border-border/90 bg-card card-elevation overflow-hidden">
+                {/* Desktop Column Header */}
+                <div className="hidden md:grid grid-cols-10 gap-4 px-6 py-3.5 bg-secondary/30 border-b border-border/60 text-xs font-semibold text-muted-foreground">
                     <div className="col-span-3">Habit Routine</div>
                     <div className="col-span-5 grid grid-cols-7 gap-2 text-center">
-                        {WEEK_DAYS.map((day) => (
-                            <div
-                                key={day.toDateString()}
-                                className="space-y-0.5">
-                                <span className="block uppercase tracking-wider text-[10px] text-stone-400">
-                                    {day.toLocaleDateString("en-US", {
-                                        weekday: "short",
-                                    })}
-                                </span>
-                                <span className="text-xs font-semibold text-stone-500">
-                                    {day.toLocaleDateString("en-US", {
-                                        day: "numeric",
-                                    })}
-                                </span>
-                            </div>
-                        ))}
+                        {WEEK_DAYS.map((day) => {
+                            const isToday = day.toDateString() === today.toDateString();
+                            return (
+                                <div
+                                    key={day.toDateString()}
+                                    className={cn(
+                                        "py-1 rounded-md transition-colors",
+                                        isToday && "bg-emerald-500/10 border border-emerald-500/20",
+                                    )}>
+                                    <span
+                                        className={cn(
+                                            "block uppercase tracking-wider text-[10px]",
+                                            isToday ? "text-emerald-500 font-bold" : "text-muted-foreground/70",
+                                        )}>
+                                        {day.toLocaleDateString("en-US", { weekday: "short" })}
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            "text-xs font-semibold",
+                                            isToday ? "text-emerald-500" : "text-foreground",
+                                        )}>
+                                        {day.toLocaleDateString("en-US", { day: "numeric" })}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
-                    <div className="col-span-2 text-right">Weekly Progress</div>
+                    <div className="col-span-2 text-right">Weekly Velocity</div>
                 </div>
 
-                {/* Habits Rows */}
-                <div className="divide-y divide-stone-100 dark:divide-stone-800">
+                {/* Habit Rows */}
+                <div className="divide-y divide-border/50">
                     {initialHabits.length > 0 ? (
                         initialHabits.map((habit) => {
-                            const habitWeekCompletions =
-                                initialCompletions.filter(
-                                    (c) => c.habitId === habit.id,
-                                );
+                            const habitWeekCompletions = initialCompletions.filter(
+                                (c) => c.habitId === habit.id,
+                            );
                             const completionCount = habitWeekCompletions.length;
+                            const percentage = Math.round((completionCount / 7) * 100);
 
                             return (
                                 <div
                                     key={habit.id}
-                                    className="grid grid-cols-1 md:grid-cols-10 gap-4 items-center p-6 hover:bg-stone-50/40 dark:hover:bg-stone-950/10">
-                                    {/* Column 1 (col-span-3): Habit Details & Actions */}
-                                    <div className="col-span-1 md:col-span-3 flex items-center justify-between gap-4 group">
-                                        <div className="space-y-1">
-                                            <p className="font-semibold text-stone-800 dark:text-stone-100">
+                                    className="grid grid-cols-1 md:grid-cols-10 gap-4 items-center p-5 sm:p-6 hover:bg-secondary/20 transition-colors group">
+                                    {/* Column 1: Habit Name & Streak */}
+                                    <div className="col-span-1 md:col-span-3 flex items-center justify-between gap-3">
+                                        <div className="space-y-1 min-w-0 pr-2">
+                                            <p className="font-medium text-foreground truncate text-sm">
                                                 {habit.name}
                                             </p>
-                                            <div className="flex items-center gap-1 text-xs text-orange-500 font-bold">
-                                                <Flame className="w-3.5 h-3.5 fill-current" />
-                                                <span>
-                                                    {habit.streak}d streak
-                                                </span>
+                                            <div className="flex items-center gap-1.5 text-xs text-amber-500 font-semibold">
+                                                <Flame className="size-3.5 fill-current" />
+                                                <span>{habit.streak}d streak</span>
                                             </div>
                                         </div>
+
                                         <button
+                                            type="button"
                                             onClick={async () => {
                                                 await deleteHabit(habit.id);
                                             }}
-                                            className="text-stone-400 hover:text-red-500 md:opacity-0 group-hover:opacity-100 focus:outline-none"
+                                            className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                                             title="Delete habit">
-                                            <Trash className="w-4 h-4" />
+                                            <Trash2 className="size-3.5" />
                                         </button>
                                     </div>
 
-                                    {/* Column 2 (col-span-5): 7-Day Checklist Buttons */}
+                                    {/* Column 2: 7-Day Checklist Matrix */}
                                     <div className="col-span-1 md:col-span-5 grid grid-cols-7 gap-2 text-center">
                                         {WEEK_DAYS.map((day) => {
-                                            const dateKey = day
-                                                .toISOString()
-                                                .split("T")[0];
-                                            const isCompleted =
-                                                habitWeekCompletions.some(
-                                                    (c) =>
-                                                        new Date(
-                                                            c.completedAt,
-                                                        ).toDateString() ===
-                                                        day.toDateString(),
-                                                );
+                                            const dateKey = day.toISOString().split("T")[0];
+                                            const isCompleted = habitWeekCompletions.some(
+                                                (c) =>
+                                                    new Date(c.completedAt).toDateString() ===
+                                                    day.toDateString(),
+                                            );
+                                            const isToday = day.toDateString() === today.toDateString();
 
                                             return (
                                                 <div
                                                     key={dateKey}
                                                     className="flex flex-col items-center justify-center gap-1">
-                                                    {/* Mini Day Header (Visible on Mobile to track alignments) */}
-                                                    <span className="block md:hidden text-[9px] uppercase tracking-wider text-stone-400">
-                                                        {day.toLocaleDateString(
-                                                            "en-US",
-                                                            {
-                                                                weekday:
-                                                                    "narrow",
-                                                            },
-                                                        )}
+                                                    {/* Mobile weekday label */}
+                                                    <span className="block md:hidden text-[9px] uppercase tracking-wider text-muted-foreground">
+                                                        {day.toLocaleDateString("en-US", { weekday: "narrow" })}
                                                     </span>
+
                                                     <button
+                                                        type="button"
                                                         onClick={async () => {
-                                                            await toggleHabitDate(
-                                                                habit.id,
-                                                                dateKey,
-                                                            );
+                                                            await toggleHabitDate(habit.id, dateKey);
                                                         }}
-                                                        className={`w-7 h-7 rounded-lg border flex items-center justify-center focus:outline-none ${
+                                                        className={cn(
+                                                            "size-8 rounded-lg border flex items-center justify-center transition-all active:scale-95",
                                                             isCompleted
-                                                                ? "bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-700"
-                                                                : "bg-white border-stone-200 dark:bg-stone-950 dark:border-stone-800 hover:bg-stone-50"
-                                                        }`}>
+                                                                ? "bg-emerald-600 border-emerald-600 text-white shadow-xs shadow-emerald-500/20"
+                                                                : "bg-secondary/40 border-border/80 hover:border-emerald-500/50 hover:bg-secondary/80",
+                                                            isToday && !isCompleted && "ring-1 ring-emerald-500/50",
+                                                        )}>
                                                         {isCompleted && (
-                                                            <Check className="w-4 h-4 stroke-3" />
+                                                            <Check className="size-3.5 stroke-[2.5]" />
                                                         )}
                                                     </button>
                                                 </div>
@@ -246,42 +296,61 @@ export function HabitsClient({
                                         })}
                                     </div>
 
-                                    {/* Column 3 (col-span-2): Premium Progress Indicator */}
-                                    <div className="col-span-1 md:col-span-2 text-left md:text-right">
-                                        <span className="inline-block text-xs font-bold text-stone-500 bg-stone-100 dark:bg-stone-800 px-3 py-1.5 rounded-full">
-                                            {completionCount} of 7 Completed
-                                        </span>
+                                    {/* Column 3: Visual Progress Meter */}
+                                    <div className="col-span-1 md:col-span-2 flex flex-col items-start md:items-end gap-1.5">
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold">
+                                            <span className="text-foreground">{completionCount}/7</span>
+                                            <span className="text-muted-foreground text-[10px]">
+                                                ({percentage}%)
+                                            </span>
+                                        </div>
+                                        <div className="w-full md:w-28 bg-secondary h-1.5 rounded-full overflow-hidden">
+                                            <div
+                                                className={cn(
+                                                    "h-full rounded-full transition-all duration-300",
+                                                    completionCount === 7 ? "bg-emerald-500" : "bg-emerald-500/80",
+                                                )}
+                                                style={{ width: `${(completionCount / 7) * 100}%` }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             );
                         })
                     ) : (
-                        <div className="p-8 text-center text-stone-400">
-                            No habits logged yet. Create your first routine
-                            below!
+                        <div className="p-12 text-center space-y-2">
+                            <Sparkles className="size-6 text-muted-foreground/40 mx-auto" />
+                            <h3 className="text-sm font-semibold text-foreground">
+                                No habit routines yet
+                            </h3>
+                            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                                Start by logging 1-3 foundational habits below to establish daily momentum.
+                            </p>
                         </div>
                     )}
                 </div>
 
-                {/* Bottom Form */}
-                <div className="p-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/30 dark:bg-stone-950/10">
-                    <form
-                        onSubmit={handleAddHabit}
-                        className="flex gap-3 max-w-xl">
+                {/* Bottom Inline Quick-Add */}
+                <div className="p-4 border-t border-border/60 bg-secondary/10">
+                    <form onSubmit={handleAddHabit} className="flex gap-2.5 max-w-lg">
                         <Input
-                            name="name"
-                            placeholder="Add a new habit routine..."
+                            placeholder="Add a new habit routine (e.g. 90m Deep Work, Gym)..."
                             value={newHabitName}
                             onChange={(e) => setNewHabitName(e.target.value)}
                             required
-                            className="h-9 text-sm bg-white dark:bg-stone-950"
+                            className="h-9 text-xs bg-card border-border/80 focus-visible:ring-1 focus-visible:ring-emerald-500"
                         />
-                        <Button type="submit" size="sm" className="flex gap-2">
-                            <Plus className="w-4 h-4" /> Add Habit
+                        <Button
+                            type="submit"
+                            size="sm"
+                            disabled={!newHabitName.trim() || isSubmitting}
+                            className="btn-tactile h-9 text-xs font-medium bg-foreground text-background hover:bg-foreground/90 shrink-0">
+                            <Plus className="size-3.5 mr-1" />
+                            Add Habit
                         </Button>
                     </form>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 }
