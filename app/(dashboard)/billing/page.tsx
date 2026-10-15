@@ -6,103 +6,241 @@ import {
     createPortalSession,
 } from "@/app/billing/actions";
 import { Button } from "@/components/ui/button";
-import { Check, CreditCard, Sparkles, Zap } from "lucide-react";
+import {
+    Check,
+    CreditCard,
+    Sparkles,
+    ShieldCheck,
+    Calendar,
+    HelpCircle,
+} from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default async function BillingPage() {
     const session = await auth();
     if (!session?.user?.id) redirect("/login");
 
     const plan = await getSubscriptionPlan();
+    const isPro = plan.isPro;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-12">
-            <header className="border-b border-border/40 pb-6">
-                <h1 className="text-xl font-bold tracking-tight">Membership</h1>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold opacity-60">
-                    Account & Billing
-                </p>
-            </header>
+        <div className="relative space-y-10 pb-16 max-w-5xl mx-auto">
+            {/* Ambient Lighting */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-emerald-500/4 blur-3xl pointer-events-none rounded-full" />
 
-            <div className="grid md:grid-cols-5 gap-8 items-start">
-                <div className="md:col-span-2 space-y-6">
-                    <div className="p-6 rounded-2xl border border-border/40 bg-secondary/10 space-y-4">
-                        <div className="flex items-center gap-2">
-                            <Zap className="size-4 text-primary" />
-                            <span className="text-sm font-bold">
-                                Current Plan
-                            </span>
-                        </div>
-                        <div className="space-y-1">
-                            <h2 className="text-2xl font-bold">
-                                {plan.isPro ? "Pro Member" : "Free Tier"}
-                            </h2>
-                            {/* Check if currentPeriodEnd exists on the plan object */}
-                            {plan.isPro &&
-                                "currentPeriodEnd" in plan &&
-                                plan.currentPeriodEnd && (
-                                    <p className="text-[11px] text-muted-foreground font-medium">
-                                        Renews{" "}
-                                        {format(
-                                            plan.currentPeriodEnd,
-                                            "MMM do, yyyy",
-                                        )}
-                                    </p>
-                                )}
-                        </div>
-                        <form
-                            action={
-                                plan.isPro ? createPortalSession : undefined
-                            }>
-                            <Button
-                                disabled={!plan.isPro}
-                                className="w-full h-9 text-[11px] font-bold uppercase tracking-wider"
-                                variant="outline">
-                                <CreditCard className="size-3.5 mr-2" />
-                                Manage Billing
-                            </Button>
-                        </form>
+            {/* --- HEADER --- */}
+            <header className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/80">
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+                            Membership & Billing
+                        </h1>
+                        <span
+                            className={cn(
+                                "text-xs font-medium px-2.5 py-0.5 rounded-full border",
+                                isPro
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-secondary text-muted-foreground border-border/80",
+                            )}
+                        >
+                            {isPro ? "Pro Plan Active" : "Free Tier"}
+                        </span>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Manage your subscription tier, billing cycle, and Stripe payment
+                        methods.
+                    </p>
                 </div>
 
-                <div className="md:col-span-3 space-y-8">
-                    <div className="space-y-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            Platform Capabilities
-                        </h3>
-                        <div className="grid gap-3">
+                {isPro && "currentPeriodEnd" in plan && plan.currentPeriodEnd && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border/80 card-elevation text-xs text-muted-foreground">
+                        <Calendar className="size-3.5 text-emerald-500" />
+                        <span>Renews: </span>
+                        <span className="font-semibold text-foreground">
+                            {format(plan.currentPeriodEnd, "MMM d, yyyy")}
+                        </span>
+                    </div>
+                )}
+            </header>
+
+            {/* --- SIDE-BY-SIDE TIER COMPARISON MATRIX --- */}
+            <div className="grid md:grid-cols-2 gap-6 items-stretch">
+                {/* 1. FREE TIER CARD */}
+                <div
+                    className={cn(
+                        "rounded-2xl border bg-card p-6 sm:p-7 card-elevation flex flex-col justify-between transition-all",
+                        !isPro
+                            ? "border-border/90 ring-1 ring-border/50"
+                            : "border-border/60 opacity-80",
+                    )}
+                >
+                    <div className="space-y-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-foreground">Free Tier</h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Essential baseline for daily task tracking.
+                                </p>
+                            </div>
+                            {!isPro && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary text-muted-foreground px-2 py-0.5 rounded border border-border">
+                                    Current Plan
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-extrabold tracking-tight text-foreground">
+                                $0
+                            </span>
+                            <span className="text-xs text-muted-foreground">/ forever</span>
+                        </div>
+
+                        {/* Free Features Checklist */}
+                        <div className="space-y-3 pt-3 border-t border-border/50">
                             {[
-                                "Unlimited Habit Tracking",
-                                "Advanced Exam Milestones",
-                                "Priority Task Engine",
-                                "Two-way Calendar Sync",
+                                "Up to 3 active habit routines",
+                                "1 active academic exam countdown",
+                                "10 daily scheduled planner tasks",
+                                "Standard 25/5 Pomodoro focus timer",
+                                "7-day consistency timeline history",
                             ].map((feature) => (
                                 <div
                                     key={feature}
-                                    className="flex items-center gap-3 text-sm font-medium text-foreground/80">
-                                    <div className="size-5 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                                        <Check className="size-3 text-primary stroke-3" />
+                                    className="flex items-center gap-2.5 text-xs text-muted-foreground"
+                                >
+                                    <div className="size-4 rounded-full bg-secondary flex items-center justify-center shrink-0 border border-border">
+                                        <Check className="size-2.5 text-foreground/70" />
                                     </div>
-                                    {feature}
+                                    <span>{feature}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {!plan.isPro && (
-                        <form
-                            action={async () => {
-                                "use server";
-                                await createCheckoutSession(
-                                    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID!,
-                                );
-                            }}>
-                            <Button className="w-full h-12 rounded-xl bg-primary hover:opacity-90 transition-all shadow-xl shadow-primary/20 text-xs font-bold uppercase tracking-widest gap-2">
-                                <Sparkles className="size-4 fill-current" />
-                                Upgrade to Pro — $3/mo
-                            </Button>
-                        </form>
+                    <div className="pt-6 mt-6 border-t border-border/40">
+                        <Button
+                            disabled
+                            variant="outline"
+                            className="w-full h-10 text-xs font-semibold border-border bg-secondary/30 text-muted-foreground"
+                        >
+                            {!isPro ? "Current Workspace Plan" : "Included Baseline"}
+                        </Button>
+                    </div>
+                </div>
+
+                {/* 2. PRO TIER CARD ($3/MO) */}
+                <div
+                    className={cn(
+                        "rounded-2xl border bg-card p-6 sm:p-7 card-elevation flex flex-col justify-between relative overflow-hidden transition-all",
+                        isPro
+                            ? "border-emerald-500/40 ring-1 ring-emerald-500/20"
+                            : "border-border hover:border-emerald-500/40",
                     )}
+                >
+                    {/* Top Recommended Pill */}
+                    <div className="absolute top-0 right-0 bg-emerald-500 text-zinc-950 text-[10px] font-bold px-3 py-1 rounded-bl-lg tracking-wider uppercase">
+                        {isPro ? "Active Plan" : "Recommended"}
+                    </div>
+
+                    <div className="space-y-5">
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <h3 className="text-lg font-bold text-foreground">
+                                    Pro Edition
+                                </h3>
+                                <Sparkles className="size-4 text-emerald-500 fill-current" />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Full deep-work power with automated study tools.
+                            </p>
+                        </div>
+
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-extrabold tracking-tight text-foreground">
+                                $3
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                / month (cancel anytime)
+                            </span>
+                        </div>
+
+                        {/* Pro Features Checklist */}
+                        <div className="space-y-3 pt-3 border-t border-border/50">
+                            {[
+                                "Unlimited habit routines & streak freezes",
+                                "Unlimited exam milestones + Daily Syllabus Pacing",
+                                "Unlimited daily planner tasks with priority engine",
+                                "Full 365-day annual consistency heatmaps",
+                                "Two-way Google & Outlook Calendar Sync",
+                                "Custom focus intervals & flow-state soundscapes",
+                            ].map((feature) => (
+                                <div
+                                    key={feature}
+                                    className="flex items-center gap-2.5 text-xs text-foreground/90 font-medium"
+                                >
+                                    <div className="size-4 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                                        <Check className="size-2.5 text-emerald-500 stroke-[3]" />
+                                    </div>
+                                    <span>{feature}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Pro Action Buttons */}
+                    <div className="pt-6 mt-6 border-t border-border/40">
+                        {isPro ? (
+                            <form action={createPortalSession}>
+                                <Button
+                                    type="submit"
+                                    className="btn-tactile w-full h-11 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 flex items-center justify-center gap-2"
+                                >
+                                    <CreditCard className="size-4" />
+                                    Manage Subscription & Invoices
+                                </Button>
+                            </form>
+                        ) : (
+                            <form
+                                action={async () => {
+                                    "use server";
+                                    await createCheckoutSession(
+                                        process.env.NEXT_PUBLIC_STRIPE_PRICE_ID!,
+                                    );
+                                }}
+                            >
+                                <Button
+                                    type="submit"
+                                    className="btn-tactile w-full h-11 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 flex items-center justify-center gap-2"
+                                >
+                                    <Sparkles className="size-4 text-emerald-500 fill-current" />
+                                    Upgrade to Pro — $3/mo
+                                </Button>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* --- SECURITY & GUARANTEE BANNER --- */}
+            <div className="rounded-xl border border-border/80 bg-secondary/20 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3">
+                    <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
+                    <div>
+                        <span className="font-semibold text-foreground block">
+                            Bank-Grade Security
+                        </span>
+                        <span>
+                            Payments are securely handled via Stripe with 256-bit encryption.
+                            We never store credit cards.
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 shrink-0">
+                    <HelpCircle className="size-3.5" />
+                    <span>Questions? Reach out to support</span>
                 </div>
             </div>
         </div>
