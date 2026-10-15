@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import { count, eq, and, gte, lte } from "drizzle-orm";
+import { count, eq, and, gte, lte, like } from "drizzle-orm";
 
-// Action 1: Count completed focus blocks for today
+// Action 1: Count all completed focus blocks for today (25m, 50m, or custom)
 export async function getTodayFocusCount() {
     const session = await auth();
     if (!session?.user?.id) return 0;
@@ -25,15 +25,15 @@ export async function getTodayFocusCount() {
                 eq(tasks.userId, session.user.id),
                 gte(tasks.dueDate, today),
                 lte(tasks.dueDate, endOfDay),
-                eq(tasks.title, "[FOCUS] 25m Focus Session"),
+                like(tasks.title, "[FOCUS]%"),
             ),
         );
 
     return result[0]?.count || 0;
 }
 
-// Action 2: Log a completed session
-export async function logCompletedSession() {
+// Action 2: Log a completed session with flexible duration support
+export async function logCompletedSession(durationMinutes: number = 25) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -41,7 +41,7 @@ export async function logCompletedSession() {
     today.setHours(12, 0, 0, 0);
 
     await db.insert(tasks).values({
-        title: "[FOCUS] 25m Focus Session",
+        title: `[FOCUS] ${durationMinutes}m Focus Session`,
         userId: session.user.id,
         completed: true,
         dueDate: today,
@@ -53,7 +53,7 @@ export async function logCompletedSession() {
     revalidatePath("/focus");
 }
 
-// Action 3: FIXED: Added dynamic reset action to clear today's logged focus sessions
+// Action 3: Reset all logged focus sessions for today
 export async function resetTodayFocusSessions() {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
@@ -71,7 +71,7 @@ export async function resetTodayFocusSessions() {
                 eq(tasks.userId, session.user.id),
                 gte(tasks.dueDate, today),
                 lte(tasks.dueDate, endOfDay),
-                eq(tasks.title, "[FOCUS] 25m Focus Session"),
+                like(tasks.title, "[FOCUS]%"),
             ),
         );
 
