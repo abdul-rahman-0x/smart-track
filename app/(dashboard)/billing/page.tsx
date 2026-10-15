@@ -159,7 +159,7 @@ export default async function BillingPage() {
 
                         <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-extrabold tracking-tight text-foreground">
-                                $3
+                                $9
                             </span>
                             <span className="text-xs text-muted-foreground">
                                 / month (cancel anytime)
@@ -215,7 +215,7 @@ export default async function BillingPage() {
                                     className="btn-tactile w-full h-11 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 flex items-center justify-center gap-2"
                                 >
                                     <Sparkles className="size-4 text-emerald-500 fill-current" />
-                                    Upgrade to Pro — $3/mo
+                                    Upgrade to Pro — $9/mo
                                 </Button>
                             </form>
                         )}

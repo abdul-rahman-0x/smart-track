@@ -152,7 +152,7 @@ const SidebarContent = ({
                 Pro Plan
               </span>
               <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded-md">
-                $3/mo
+                $9/mo
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
