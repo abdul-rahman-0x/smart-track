@@ -1,4 +1,17 @@
-# Smart Track
+<p align="center">
+  <a href="https://smart-track-hub.vercel.app">
+    <img src="app/icon.svg" alt="Smart Track Logo" width="100" height="100" />
+  </a>
+</p>
+
+<h1 align="center">Smart Track</h1>
+
+<p align="center">
+  <a href="https://smart-track-hub.vercel.app"><img src="https://img.shields.io/badge/DEPLOYED_ON-VERCEL-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Deployed on Vercel" /></a>
+  <img src="https://img.shields.io/badge/NEXT.JS-16-0070F3?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-10B981?style=for-the-badge" alt="MIT License" /></a>
+  <a href="https://smart-track-hub.vercel.app"><img src="https://img.shields.io/badge/LIVE_DEMO-SMARTTRACK-7928CA?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Demo" /></a>
+</p>
 
 <p align="center">
   <strong>Plan intentionally, build consistent habits, and stay focused on what matters.</strong>
@@ -6,17 +19,6 @@
 
 <p align="center">
   smart-track is a productivity platform designed for students, developers, and self-learners who need more than a simple to-do list. It combines task management, habit tracking, academic planning, and subscription-based productivity tools into a single, structured workspace built for long-term consistency.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat&logo=nextdotjs" />
-  <img src="https://img.shields.io/badge/React-19-%2361DAFB?style=flat&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/TypeScript-Strict-%233178C6?style=flat&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/TailwindCSS-4-%2306B6D4?style=flat&logo=tailwindcss&logoColor=white" />
-  <img src="https://img.shields.io/badge/Auth.js-v5-black?style=flat" />
-  <img src="https://img.shields.io/badge/Drizzle-ORM-%23C5F74F?style=flat" />
-  <img src="https://img.shields.io/badge/Neon-PostgreSQL-%234169E1?style=flat&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Stripe-Billing-%23008CFF?style=flat&logo=stripe&logoColor=white" />
 </p>
 
 ---
