@@ -82,7 +82,7 @@ const SidebarContent = ({
         )}
       >
         <Link
-          href="/dashboard"
+          href="/"
           onClick={onLinkClick}
           className="flex items-center gap-2.5 group"
         >
