@@ -206,22 +206,6 @@ const SidebarContent = ({
 
             <DropdownMenuSeparator className="bg-border my-1" />
 
-            <DropdownMenuItem asChild className="cursor-pointer text-xs font-medium">
-              <Link href="/billing" className="flex items-center gap-2">
-                <Settings2 className="size-3.5 text-muted-foreground" />
-                Account Settings
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem asChild className="cursor-pointer text-xs font-medium">
-              <Link href="/" target="_blank" className="flex items-center gap-2">
-                <Globe className="size-3.5 text-muted-foreground" />
-                Public Website
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator className="bg-border my-1" />
-
             <DropdownMenuItem
               className="cursor-pointer text-xs font-medium text-destructive focus:text-destructive"
               onClick={() => signOut({ callbackUrl: "/" })}
