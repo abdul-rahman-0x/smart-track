@@ -1,20 +1,32 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-const montserratSans = Montserrat({
-    variable: "--font-inter",
-    subsets: ["latin"],
-    weight: ["300", "400", "500", "600", "700"],
+// 1. Casca Body / UI Font
+const neueMontreal = localFont({
+    src: [
+        {
+            path: "./fonts/NeueMontreal-Regular.otf",
+            weight: "400",
+            style: "normal",
+        },
+        {
+            path: "./fonts/NeueMontreal-Medium.otf",
+            weight: "500",
+            style: "normal",
+        },
+    ],
+    variable: "--font-sans",
     display: "swap",
 });
 
-const montserratSerif = Montserrat({
-    variable: "--font-ibm-plex-serif",
-    subsets: ["latin"],
-    weight: ["300", "400", "500", "600", "700"],
+// 2. Authentic Casca Denton Variable Display Serif
+const denton = localFont({
+    src: "./fonts/Denton-Variable.woff2",
+    variable: "--font-serif",
     display: "swap",
+    weight: "100 900", // CRITICAL: unlocks full width & weight axes for Denton
 });
 
 export const metadata: Metadata = {
@@ -33,13 +45,16 @@ export default function RootLayout({
             lang="en"
             suppressHydrationWarning
             data-scroll-behavior="smooth"
-            className={`${montserratSans.variable} ${montserratSerif.variable} antialiased`}>
-            <body>
+            className={`${neueMontreal.variable} ${denton.variable} dark antialiased`}
+            style={{ colorScheme: "dark" }}
+        >
+            <body className="min-h-screen bg-background font-sans text-foreground">
                 <ThemeProvider
                     attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange>
+                    forcedTheme="dark"
+                    enableSystem={false}
+                    disableTransitionOnChange
+                >
                     {children}
                 </ThemeProvider>
             </body>

@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown } from "lucide-react";
 
-// Structured 7-item general productivity FAQ array
-const FAQ_ITEMS = [
+interface FAQItem {
+    q: string;
+    a: string;
+}
+
+const FAQ_ITEMS: FAQItem[] = [
     {
         q: "How does the dynamic planner differ from a standard digital calendar?",
         a: "Standard calendars only hold dates. Smart Track actively maps your major milestone dates, breaks down goals into bite-sized chapters, and dynamically integrates them into your daily task list to prevent cramming.",
@@ -27,7 +30,7 @@ const FAQ_ITEMS = [
     },
     {
         q: "Is there a free trial or student discount available?",
-        a: "Our base planner is completely free to use forever. For users seeking unlimited tasks, habits, and Google Calendar sync, our Pro tier is priced at an accessible rate of just $3/month, with an additional 20% discount on annual commitments.",
+        a: "Our base planner is completely free to use forever. For users seeking unlimited tasks, habits, and Google Calendar sync, our Pro tier is priced at an accessible rate of just $7/month billed annually ($9/month monthly).",
     },
     {
         q: "Can I access my goals and roadmaps across multiple devices?",
@@ -43,52 +46,65 @@ export default function FAQ() {
     };
 
     return (
-        // Restored to max-w-4xl to prevent compressed text lines
-        <section className="max-w-4xl mx-auto px-4 py-20 space-y-12">
-            {/* --- SECTION HEADER (Updated to match LowrCarbon template) --- */}
-            <div className="text-center space-y-4">
-                <h3 className="font-serif font-medium text-3xl sm:text-4xl tracking-[-0.04em] leading-[1.1] text-stone-900 dark:text-white">
+        <section id="faq" className="mx-auto max-w-4xl px-6 py-24 sm:py-32 lg:px-8">
+            {/* 1. Casca Section Header */}
+            <div className="mx-auto max-w-2xl text-center">
+                <h2 className="font-serif text-3xl font-light leading-[1.08] tracking-normal text-[#f9f8f6] sm:text-5xl lg:text-[54px]">
                     Frequently asked questions
-                </h3>
-                <p className="text-sm text-stone-500 dark:text-stone-400">
-                    In case you missed anything and have some more questions.
+                </h2>
+                <p className="mx-auto mt-4 max-w-md font-sans text-[15.5px] font-normal leading-[1.6] text-[#f9f8f6]/60">
+                    Everything you need to know about the product, sync engines, and billing infrastructure.
                 </p>
             </div>
 
-            {/* --- ACCORDION GRID --- */}
-            <div className="divide-y divide-stone-200/60 dark:divide-stone-800/60 border-t border-b border-stone-200/60 dark:border-stone-800/60">
+            {/* 2. Casca Accordion List */}
+            <div className="mt-16 divide-y divide-white/[0.06] border-y border-white/[0.06]">
                 {FAQ_ITEMS.map((item, idx) => {
                     const isOpen = openIndex === idx;
                     return (
-                        <div key={idx} className="py-5">
+                        <div key={idx} className="group py-6 transition-colors">
                             <button
+                                type="button"
                                 onClick={() => toggleFAQ(idx)}
-                                className="w-full flex items-center justify-between text-left focus:outline-none cursor-pointer group">
-                                {/* Implements IBM Plex Serif typography globally on questions */}
-                                <h4 className="font-serif font-medium text-sm sm:text-base pr-4 text-stone-900 dark:text-stone-100">
+                                className="flex w-full items-center justify-between text-left outline-none cursor-pointer"
+                                aria-expanded={isOpen}
+                            >
+                                {/* Question */}
+                                <span className="pr-6 font-sans text-[16px] font-normal tracking-[-0.015em] text-[#f9f8f6] transition-colors duration-200 group-hover:text-white sm:text-[17px]">
                                     {item.q}
-                                </h4>
+                                </span>
 
-                                {/* Rotating chevron transition matching the template */}
-                                <ChevronDown
-                                    className={`w-4 h-4 shrink-0 text-stone-400 dark:text-stone-600 transition-transform duration-300 ease-in-out ${
-                                        isOpen
-                                            ? "transform rotate-180 text-orange-500"
-                                            : "group-hover:text-stone-600 dark:group-hover:text-stone-300"
-                                    }`}
-                                />
+                                {/* Minimalist Circular Indicator */}
+                                <div
+                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${isOpen
+                                            ? "border-white/20 bg-[#20201f] text-[#f9f8f6]"
+                                            : "border-white/8 bg-[#161616] text-[#f9f8f6]/40 group-hover:border-white/20 group-hover:text-[#f9f8f6]"
+                                        }`}
+                                >
+                                    <svg
+                                        className={`h-3 w-3 transition-transform duration-200 ${isOpen ? "rotate-45" : "rotate-0"
+                                            }`}
+                                        viewBox="0 0 12 12"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        strokeLinecap="round"
+                                    >
+                                        <path d="M6 2.5v7M2.5 6h7" />
+                                    </svg>
+                                </div>
                             </button>
 
-                            {/* Smooth height sliding panel transition */}
+                            {/* Grid Auto-Height Expansion */}
                             <div
-                                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                    isOpen
-                                        ? "max-h-40 opacity-100 mt-3"
-                                        : "max-h-0 opacity-0"
-                                }`}>
-                                <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 leading-relaxed pb-1">
-                                    {item.a}
-                                </p>
+                                className={`grid transition-[grid-template-rows,opacity] duration-250 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                                    }`}
+                            >
+                                <div className="overflow-hidden">
+                                    <p className="pt-3 font-sans text-[14.5px] font-normal leading-[1.65] text-[#f9f8f6]/60 sm:text-[15px]">
+                                        {item.a}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     );

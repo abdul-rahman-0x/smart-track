@@ -3,7 +3,6 @@
 import React, { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2 } from "lucide-react";
 import { createCheckoutSession } from "@/app/billing/actions";
 
 export default function Pricing() {
@@ -27,7 +26,6 @@ export default function Pricing() {
             try {
                 await createCheckoutSession(proPriceId);
             } catch (error) {
-                // If it's Next.js internal redirect, let it pass through to navigate
                 if ((error as Error)?.message?.includes("NEXT_REDIRECT")) {
                     return;
                 }
@@ -37,138 +35,185 @@ export default function Pricing() {
     };
 
     return (
-        <section
-            id="pricing"
-            className="max-w-5xl mx-auto px-4 py-20 space-y-12">
-            <div className="text-center space-y-4">
-                <h3 className="font-serif font-medium text-3xl sm:text-4xl tracking-[-0.04em] leading-[1.1] text-stone-900 dark:text-white max-w-xl mx-auto">
-                    Pick a plan, master your time
-                </h3>
-                <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
-                    Simple, transparent pricing built to scale your daily focus
-                    as your workload grows.
+        <section id="pricing" className="mx-auto max-w-6xl px-6 py-24 sm:py-32 lg:px-8">
+            {/* 1. Header */}
+            <div className="mx-auto max-w-3xl text-center">
+                <h2 className="font-serif text-3xl font-light leading-[1.08] tracking-normal text-[#f9f8f6] sm:text-5xl lg:text-[54px]">
+                    Transparent plans for <br className="hidden sm:inline" />
+                    disciplined builders
+                </h2>
+                <p className="mx-auto mt-5 max-w-md font-sans text-[15.5px] font-normal leading-[1.6] text-[#f9f8f6]/60">
+                    Start for free to establish your daily streak. Upgrade whenever you need unlimited project pacing and automated audits.
                 </p>
 
-                <div className="flex justify-center pt-2">
-                    <div className="inline-flex items-center gap-2 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+                {/* Minimalist Casca Billing Toggle */}
+                <div className="mt-8 flex justify-center">
+                    <div className="inline-flex items-center rounded-[7.4px] border border-white/[0.08] bg-[#161616] p-1">
                         <button
                             type="button"
                             onClick={() => setIsYearly(false)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all ${!isYearly
-                                ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
-                                : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-                                }`}>
-                            Monthly
+                            className={`rounded-[5px] px-3.5 py-1.5 font-sans text-[12.5px] transition-colors duration-200 ${!isYearly
+                                ? "bg-[#20201f] font-medium text-[#f9f8f6]"
+                                : "text-[#f9f8f6]/50 hover:text-[#f9f8f6]"
+                                }`}
+                        >
+                            Monthly billing
                         </button>
                         <button
                             type="button"
                             onClick={() => setIsYearly(true)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all ${isYearly
-                                ? "bg-white text-stone-950 dark:bg-stone-900 dark:text-stone-50 shadow-sm"
-                                : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-                                }`}>
-                            Yearly
+                            className={`flex items-center gap-1.5 rounded-[5px] px-3.5 py-1.5 font-sans text-[12.5px] transition-colors duration-200 ${isYearly
+                                ? "bg-[#20201f] font-medium text-[#f9f8f6]"
+                                : "text-[#f9f8f6]/50 hover:text-[#f9f8f6]"
+                                }`}
+                        >
+                            <span>Annual billing</span>
+                            <span className="rounded bg-[#66cc63]/15 px-1.5 py-0.2 font-mono text-[10px] text-[#66cc63]">
+                                -20%
+                            </span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto">
-                {/* Free Plan Card */}
-                <div className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl flex flex-col justify-between hover:border-stone-300 dark:hover:border-stone-700 transition-all duration-300">
-                    <div className="space-y-4">
-                        <span className="text-xs uppercase tracking-wider font-bold text-stone-400">
-                            Free
-                        </span>
-                        <div className="text-3xl font-extrabold tracking-tight">
-                            $0
-                            <span className="text-sm font-normal text-stone-400 ml-1">
-                                /month
+            {/* 2. Pricing Cards Grid */}
+            <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
+                {/* FREE TIER CARD */}
+                <div className="flex flex-col justify-between rounded-[16px] border border-white/[0.06] bg-[#161616] p-7  sm:p-9">
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <span className="font-sans text-[11px] font-normal uppercase tracking-wider text-[#f9f8f6]/40">
+                                Starter Tier
                             </span>
                         </div>
-                        <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                            Perfect for beginners building baseline study routines.
-                        </p>
-                        <div className="border-t border-stone-100 dark:border-stone-800 pt-4 space-y-3 text-xs">
-                            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                Up to 3 active habit routines
+
+                        <div>
+                            <div className="flex items-baseline">
+                                <span className="font-serif text-5xl font-light text-[#f9f8f6] sm:text-6xl">
+                                    $0
+                                </span>
+                                <span className="ml-2 font-sans text-[14px] text-[#f9f8f6]/40">
+                                    / month
+                                </span>
                             </div>
-                            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                1 active academic milestone
-                            </div>
-                            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                10 daily planner tasks
-                            </div>
-                            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                Standard 25/5 Pomodoro timer
-                            </div>
+                            <p className="mt-3 font-sans text-[16px] leading-relaxed text-[#f9f8f6]/60">
+                                Essential baseline routine tracking for individual students and creators.
+                            </p>
+                        </div>
+
+                        {/* Feature Checklist */}
+                        <div className="space-y-3.5 border-t border-white/[0.06] pt-6">
+                            {[
+                                "Up to 3 active habit streak routines",
+                                "1 academic milestone countdown",
+                                "10 daily planner execution tasks",
+                                "Standard 25/5 Pomodoro focus timer",
+                                "Historical 14-day consistency view",
+                            ].map((feature, i) => (
+                                <div key={i} className="flex items-center gap-3 text-[16px] text-[#f9f8f6]/70">
+                                    <svg
+                                        className="h-4 w-4 shrink-0 text-[#66cc63]"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                    <span>{feature}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    {/* Using Next.js Link instead of a standard <a> tag */}
-                    <Button asChild className="w-full mt-6" variant="outline">
-                        <Link href="/login">Get Started</Link>
-                    </Button>
+
+                    <div className="mt-8 pt-4">
+                        <Button asChild variant="outline" className="w-full justify-center">
+                            <Link href="/login">Get started free</Link>
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Pro Plan Card */}
-                <div className="p-6 bg-stone-950 border-2 border-emerald-500 text-stone-100 rounded-2xl flex flex-col justify-between relative overflow-hidden transition-all duration-300">
-                    <span className="absolute top-4 right-4 text-[9px] font-bold text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded bg-emerald-500/10">
-                        Most popular
-                    </span>
-                    <div className="space-y-4">
-                        <span className="text-xs uppercase tracking-wider font-bold text-emerald-400">
-                            Pro
+                {/* PRO TIER CARD (Elevated Casca Container) */}
+                <div className="relative flex flex-col justify-between rounded-[16px] border border-white/[0.14] bg-[#20201f] p-7 shadow-[0_16px_40px_rgba(0,0,0,0.32)] sm:p-9">
+                    {/* Subtle Pro Pill */}
+                    <div className="absolute right-7 top-7">
+                        <span className="rounded-[4px] bg-[#66cc63]/15 px-2 py-0.5 font-sans text-[11px] font-normal text-[#66cc63]">
+                            Full Workspace
                         </span>
-                        <div className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
-                            <span>${proPrice}</span>
-                            <span className="text-sm font-normal text-stone-400">
-                                /month
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <span className="font-sans text-[11px] font-normal uppercase tracking-wider text-[#66cc63]">
+                                Pro Performance
                             </span>
-                            {isYearly && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                    Save 20%
-                                </span>
-                            )}
                         </div>
-                        <p className="text-xs text-stone-400 leading-relaxed">
-                            Full deep-work power with automated study tools.
-                        </p>
-                        <div className="border-t border-stone-800 pt-4 space-y-3 text-xs">
-                            <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                Unlimited habits & streak freeze
+
+                        <div>
+                            <div className="flex items-baseline">
+                                <span className="font-serif text-5xl font-light text-[#f9f8f6] sm:text-6xl">
+                                    ${proPrice.toFixed(0)}
+                                </span>
+                                <span className="ml-2 font-sans text-[14px] text-[#f9f8f6]/40">
+                                    / month
+                                </span>
+                                {isYearly && (
+                                    <span className="ml-2.5 rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-[#f9f8f6]/70">
+                                        Billed annually
+                                    </span>
+                                )}
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                Daily Syllabus Pacing Coach
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                Unlimited tasks with Priority Queue
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                                Full 365-day consistency heatmap
-                            </div>
+                            <p className="mt-3 font-sans text-[16px] leading-relaxed text-[#f9f8f6]/60">
+                                Unlimited habit velocity, exam pacing coaching, and recurring subscription tracking.
+                            </p>
+                        </div>
+
+                        {/* Feature Checklist */}
+                        <div className="space-y-3.5 border-t border-white/[0.06] pt-6">
+                            {[
+                                "Unlimited habit streak engines & streak freeze",
+                                "Automated Syllabus Pacing Coach",
+                                "Unlimited daily tasks with Priority Queue",
+                                "Comprehensive 365-day consistency heatmap",
+                                "Subscription burn auditor powered by Stripe",
+                            ].map((feature, i) => (
+                                <div key={i} className="flex items-center gap-3 text-[16px] text-[#f9f8f6]">
+                                    <svg
+                                        className="h-4 w-4 shrink-0 text-[#66cc63]"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                    <span>{feature}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    <Button
-                        disabled={isPending}
-                        onClick={handleProUpgrade}
-                        className="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-all duration-200 cursor-pointer">
-                        {isPending ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Connecting to Stripe...
-                            </>
-                        ) : (
-                            "Get Pro Now"
-                        )}
-                    </Button>
+
+                    <div className="mt-8 pt-4">
+                        <Button
+                            disabled={isPending}
+                            onClick={handleProUpgrade}
+                            variant="secondary"
+                            className="w-full justify-center"
+                        >
+                            {isPending ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#0e0d0c] border-t-transparent" />
+                                    <span>Connecting to Stripe...</span>
+                                </div>
+                            ) : (
+                                "Upgrade to Pro"
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </section>
