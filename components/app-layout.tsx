@@ -29,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ModeToggle } from "@/components/mode-toggle";
 import { Logo } from "@/components/logo";
 import { User } from "next-auth";
 
@@ -305,10 +304,6 @@ export const AppLayout = ({ children, user, isPro }: AppLayoutProps) => {
             </div>
           </div>
 
-          {/* Right Header Actions */}
-          <div className="flex items-center gap-2">
-            <ModeToggle />
-          </div>
         </header>
 
         {/* Main Content Viewport */}

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/app/login/login-form";
 import { auth } from "@/auth";
-import { ModeToggle } from "@/components/mode-toggle";
 import { ArrowLeft } from "lucide-react";
 
 export default async function LoginPage() {
@@ -22,7 +21,6 @@ export default async function LoginPage() {
                     <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-1" />
                     <span>Back to website</span>
                 </Link>
-                <ModeToggle />
             </header>
 
             {/* Centered Minimal Container */}

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 // 1. Casca Body / UI Font
@@ -43,20 +42,12 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            suppressHydrationWarning
             data-scroll-behavior="smooth"
             className={`${neueMontreal.variable} ${denton.variable} dark antialiased`}
             style={{ colorScheme: "dark" }}
         >
             <body className="min-h-screen bg-background font-sans text-foreground">
-                <ThemeProvider
-                    attribute="class"
-                    forcedTheme="dark"
-                    enableSystem={false}
-                    disableTransitionOnChange
-                >
-                    {children}
-                </ThemeProvider>
+                {children}
             </body>
         </html>
     );
