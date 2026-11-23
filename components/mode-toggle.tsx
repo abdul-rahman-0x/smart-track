@@ -20,8 +20,8 @@ export function ModeToggle() {
 
     return (
         <Button
-            variant="icon-plain"
-            size="icon-clean"
+            variant="ghost"
+            size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label="Toggle theme">
             {mounted && theme === "dark" ? (
