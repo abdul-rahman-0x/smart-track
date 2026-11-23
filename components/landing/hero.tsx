@@ -1,218 +1,243 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { HeroMarquee } from "../hero-marquee";
 
 export default function Hero() {
   return (
     <section
       id="home"
-      className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col overflow-hidden px-4 pt-28 pb-8 sm:pt-32 lg:pt-24">
-      {/* Background Soft Glow Ambient Light */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-87.5 h-87.5 bg-stone-500/10 dark:bg-stone-100/5 rounded-full blur-[90px] -z-10" />
+      className="relative flex flex-col items-center justify-center overflow-hidden px-4 pt-32 pb-20 sm:pt-40 sm:pb-28 lg:pt-44"
+    >
+      <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
 
-      {/* Vertically centered grid container */}
-      <div className="grid flex-1 grid-cols-1 items-center gap-14 lg:grid-cols-12 lg:gap-16">
-        {/* Left Side */}
-        <div className="lg:col-span-6 space-y-8 text-center lg:text-left">
-          <div className="space-y-5">
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-[58px] tracking-tighter leading-[1.02] text-foreground">
-              Track everything
-              <span className="block font-sans font-light text-muted-foreground">
-                that matters.
-              </span>
-            </h1>
-
-            <p className="max-w-xl mx-auto lg:mx-0 text-[17px] leading-8 text-muted-foreground font-sans">
-              Your habits, goals, and progress—all in one place. Designed to
-              help you stay focused and consistent every day.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3.5">
-              <Button
-                asChild
-                size="lg"
-                className="min-w-44 font-semibold shadow-md transition-all duration-300 hover:shadow-lg bg-primary text-primary-foreground hover:opacity-90">
-                <Link href="/dashboard">Get Started Free</Link>
-              </Button>
-
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="min-w-44 font-medium border-border hover:bg-accent hover:text-accent-foreground">
-                <Link href="#features">Explore Features</Link>
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-[11px] font-mono text-muted-foreground/80">
-              <span className="flex items-center gap-1.5">
-                <svg
-                  className="w-3.5 h-3.5 text-emerald-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.5 12.75l6 6 9-13.5"
-                  />
-                </svg>
-                No credit card required
-              </span>
-
-              <span className="flex items-center gap-1.5">
-                <svg
-                  className="w-3.5 h-3.5 text-emerald-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.5 12.75l6 6 9-13.5"
-                  />
-                </svg>
-                Secure authentication
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side */}
-        <div className="relative mx-auto mt-8 h-100 w-full max-w-md sm:h-107.5 sm:max-w-lg lg:col-span-6 lg:mt-0 lg:h-112.5">
-          {/* Layer 1 (Base): Habit Grid / Monthly Checklist Card */}
-          <div
-            className="absolute w-[80%] left-2 top-8 p-5 rounded-xl border border-border bg-card/60 backdrop-blur-xl shadow-xl transition-transform duration-500
-                    ">
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-stone-300 dark:bg-stone-700" />
-                <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
-                  Monthly Checklist
-                </span>
-              </div>
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-stone-200 dark:bg-stone-800" />
-                <span className="w-1.5 h-1.5 rounded-full bg-stone-200 dark:bg-stone-800" />
-              </div>
-            </div>
-
-            {/* Calendar Habit Matrix Representation */}
-            <div className="grid grid-cols-7 gap-1.5 pt-4">
-              {Array.from({ length: 28 }).map((_, index) => {
-                const isCompleted = [
-                  1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 15, 16, 19, 20, 22, 23,
-                ].includes(index);
-                return (
-                  <div
-                    key={index}
-                    className={`aspect-square rounded-md flex items-center justify-center text-[9px] font-mono border transition-colors ${
-                      isCompleted
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold"
-                        : "bg-muted/30 border-border text-muted-foreground"
-                    }`}>
-                    {isCompleted ? (
-                      <svg
-                        className="w-2.5 h-2.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4.5 12.75l6 6 9-13.5"
-                        />
-                      </svg>
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Layer 2 (Middle Right): Focus Session Analytics Card */}
-          <div
-            className="absolute right-2 top-14 w-[45%] p-4 rounded-xl border border-border bg-card shadow-2xl transition-transform duration-500
-                    ">
-            <div className="flex items-center justify-between gap-1.5 mb-1">
-              <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
-                Focus Goal
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight text-foreground font-serif">
-              3.5 Hours
-            </span>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border">
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
-                Daily Target Met
-              </span>
-            </div>
-          </div>
-
-          {/* Layer 3 (Bottom Right): Streamlined Focus Trend Card */}
-          <div className="absolute -left-2 bottom-4 w-[48%] p-4 rounded-xl border border-border bg-card/90 backdrop-blur-md shadow-2xl transition-all duration-500 z-20">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
-                  Focus Trend
-                </span>
-                <h3 className="text-xl font-serif text-foreground font-semibold">
-                  18.4 hrs
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
-                +14%
-              </span>
-            </div>
-
-            {/* Minimalist Sparkline */}
-            <div className="h-10 w-full flex items-end">
+        {/* 1. Badge UI */}
+        <div className="mb-6 flex justify-center">
+          <div className="inline-flex items-center gap-2 rounded-[6px] bg-[#1c1b1a] px-3 py-1 text-[#f9f8f6]">
+            <div className="h-4 w-4 shrink-0">
               <svg
-                className="w-full h-8 text-emerald-500"
-                viewBox="0 0 100 20"
+                xmlns="http://www.w3.org/2000/svg"
+                width="100%"
+                height="100%"
+                viewBox="0 0 16 17"
                 fill="none"
-                stroke="currentColor"
-                preserveAspectRatio="none">
-                {/* Crisp, clean bezier path */}
-                <path
-                  d="M0 18 C15 14, 30 16, 45 8 C60 0, 75 4, 100 2"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                />
-                {/* Active endpoint node */}
-                <circle cx="100" cy="2" r="2" fill="currentColor" />
+                preserveAspectRatio="xMidYMid meet"
+                aria-hidden="true"
+              >
+                <mask
+                  id="mask_hero_shield"
+                  style={{ maskType: "alpha" }}
+                  maskUnits="userSpaceOnUse"
+                  x="0"
+                  y="0"
+                  width="16"
+                  height="17"
+                >
+                  <rect y="0.5" width="16" height="16" fill="#D9D9D9" />
+                </mask>
+                <g mask="url(#mask_hero_shield)">
+                  <path
+                    d="M7.06683 11.5667L11.7668 6.86668L10.8335 5.93334L7.06683 9.70001L5.16683 7.80001L4.2335 8.73334L7.06683 11.5667ZM8.00016 15.1667C7.07794 15.1667 6.21127 14.9917 5.40016 14.6417C4.58905 14.2917 3.8835 13.8167 3.2835 13.2167C2.6835 12.6167 2.2085 11.9111 1.8585 11.1C1.5085 10.2889 1.3335 9.42223 1.3335 8.50001C1.3335 7.57779 1.5085 6.71112 1.8585 5.90001C2.2085 5.0889 2.6835 4.38334 3.2835 3.78334C3.8835 3.18334 4.58905 2.70834 5.40016 2.35834C6.21127 2.00834 7.07794 1.83334 8.00016 1.83334C8.92238 1.83334 9.78905 2.00834 10.6002 2.35834C11.4113 2.70834 12.1168 3.18334 12.7168 3.78334C13.3168 4.38334 13.7918 5.0889 14.1418 5.90001C14.4918 6.71112 14.6668 7.57779 14.6668 8.50001C14.6668 9.42223 14.4918 10.2889 14.1418 11.1C13.7918 11.9111 13.3168 12.6167 12.7168 13.2167C12.1168 13.8167 11.4113 14.2917 10.6002 14.6417C9.78905 14.9917 8.92238 15.1667 8.00016 15.1667Z"
+                    fill="#66CC63"
+                  />
+                </g>
               </svg>
             </div>
-
-            {/* Compact Days Indicator */}
-            <div className="flex justify-between mt-2 px-0.5 text-[9px] font-mono text-muted-foreground">
-              <span>M</span>
-              <span>T</span>
-              <span>W</span>
-              <span>T</span>
-              <span>F</span>
-              <span>S</span>
-              <span>S</span>
-            </div>
+            <span className="font-sans text-[13.5px] font-normal tracking-[-0.01em]">
+              Trusted by 10,000+ engineers
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Infinite Integrations Marquee component */}
-      <div className="mt-12 lg:mt-16">
-        <HeroMarquee />
+        {/* 2. Headline: Responsive Scale Without Forced Line Overflow */}
+        <h1 className="mx-auto max-w-5xl font-serif text-[44px] font-light leading-[1.04] tracking-[-0.035em] text-[#f9f8f6] sm:text-[68px] sm:leading-[1.0] md:text-[84px] md:leading-[0.98] lg:text-[98px] lg:leading-[0.95] xl:text-[104px] [text-wrap:balance]">
+          Consolidate daily <br className="hidden sm:inline" />
+          execution 10x faster
+        </h1>
+
+        {/* 3. Subtitle: Proportioned Max-Width */}
+        <p className="mx-auto mt-6 max-w-xl font-sans text-[15px] font-normal leading-[1.65] text-[#f9f8f6]/60 sm:text-[16px] [text-wrap:balance]">
+          Engineers and academic researchers rely on Smart Track to unite task velocity, daily habit momentum, and subscription overhead in one zero-latency canvas.
+        </p>
+
+        {/* 4. Action Row */}
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+          <Button
+            asChild
+            size="lg"
+            className="h-10 rounded-[7.4px] bg-[#f9f8f6] px-6 font-sans text-[13.5px] font-medium tracking-[-0.02em] text-[#0e0d0c] transition-all duration-150 hover:bg-white hover:opacity-90"
+          >
+            <Link href="/login">Get started</Link>
+          </Button>
+
+          <Link
+            href="/#about"
+            className="inline-flex h-10 items-center gap-1.5 rounded-[7.4px] bg-[#1a1918] px-4 font-sans text-[13.5px] font-normal tracking-[-0.015em] text-[#f9f8f6]/80 transition-colors hover:bg-[#222120] hover:text-[#f9f8f6]"
+          >
+            <span>Read architecture</span>
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-[#f9f8f6]/50"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+
+        {/* 5. High-Density Mockup */}
+        <div className="relative mt-16 w-full max-w-5xl overflow-hidden rounded-[16px]  bg-[#141413]">
+          {/* OS Title Bar */}
+          <div className="flex h-10 w-full items-center justify-between border-b border-white/[0.06] bg-[#181817] px-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
+              <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
+              <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
+              <span className="ml-2 font-sans text-[12px] font-medium tracking-[-0.01em] text-[#f9f8f6]/60">
+                smart track workspace
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 rounded-full  bg-[#1f1e1d] px-2.5 py-0.5 text-[11px] text-[#f9f8f6]/70">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#66cc63] animate-pulse" />
+                <span>Session: 42m remaining</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Three-Column Operational Grid */}
+          <div className="grid grid-cols-1 gap-6 p-6 text-left md:grid-cols-12 md:p-8">
+
+            {/* Column 1: Habit Engine */}
+            <div className="space-y-4 md:col-span-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10.5px] font-medium tracking-wider text-[#f9f8f6]/40 uppercase">
+                    Daily habit engine
+                  </span>
+                  <div className="font-sans text-[14px] font-medium text-[#f9f8f6]">
+                    Active routines
+                  </div>
+                </div>
+                <span className="rounded-full  bg-[#1e1d1c] px-2.5 py-0.5 text-[11px] text-[#f9f8f6]/75">
+                  🔥 14-day streak
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-[8px] border border-white/[0.06] bg-[#181817] p-3 text-[13px] text-[#f9f8f6] transition-colors hover:border-white/[0.14]">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-[4px] bg-[#66cc63]/15 text-[10px] text-[#66cc63]">
+                      ✓
+                    </span>
+                    <span>Deep work (90m block)</span>
+                  </div>
+                  <span className="text-[11.5px] text-[#f9f8f6]/40">Engineering</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-[8px] border border-white/[0.06] bg-[#181817] p-3 text-[13px] text-[#f9f8f6] transition-colors hover:border-white/[0.14]">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-[4px] bg-[#66cc63]/15 text-[10px] text-[#66cc63]">
+                      ✓
+                    </span>
+                    <span>Distributed systems review</span>
+                  </div>
+                  <span className="text-[11.5px] text-[#f9f8f6]/40">Academic</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-[8px] border border-white/[0.06] bg-[#181817] p-3 text-[13px] text-[#f9f8f6]/60 transition-colors hover:border-white/[0.14]">
+                  <div className="flex items-center gap-3">
+                    <span className="h-4 w-4 rounded-[4px] border border-white/[0.2]" />
+                    <span>Evening schema sync</span>
+                  </div>
+                  <span className="text-[11.5px] text-[#f9f8f6]/40">Milestone</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Milestone Timelines */}
+            <div className="space-y-4 md:col-span-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10.5px] font-medium tracking-wider text-[#f9f8f6]/40 uppercase">
+                    Timelines
+                  </span>
+                  <div className="font-sans text-[14px] font-medium text-[#f9f8f6]">
+                    Upcoming deliverables
+                  </div>
+                </div>
+                <span className="text-[11px] text-[#f9f8f6]/50">2 active</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="rounded-[8px] border border-white/[0.06] bg-[#181817] p-3 text-[13px] transition-colors hover:border-white/[0.14]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-[#f9f8f6]">
+                      Distributed systems final
+                    </span>
+                    <span className="rounded bg-[#66cc63]/10 px-2 py-0.5 text-[10.5px] font-medium text-[#66cc63]">
+                      In 3 days
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11.5px] text-[#f9f8f6]/40">
+                    Exam prep • 85% ready
+                  </div>
+                </div>
+
+                <div className="rounded-[8px] border border-white/[0.06] bg-[#181817] p-3 text-[13px] transition-colors hover:border-white/[0.14]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-[#f9f8f6]">
+                      Stripe webhook pipeline
+                    </span>
+                    <span className="rounded bg-white/[0.06] px-2 py-0.5 text-[10.5px] font-medium text-[#f9f8f6]/60">
+                      In 6 days
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11.5px] text-[#f9f8f6]/40">
+                    Production v2 release
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Subscription Auditor */}
+            <div className="space-y-4 md:col-span-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10.5px] font-medium tracking-wider text-[#f9f8f6]/40 uppercase">
+                    Auditor
+                  </span>
+                  <div className="font-sans text-[14px] font-medium text-[#f9f8f6]">
+                    Monthly burn
+                  </div>
+                </div>
+                <span className="rounded bg-[#b42318]/15 px-2 py-0.5 text-[10.5px] font-medium text-[#f87171]">
+                  1 leak
+                </span>
+              </div>
+
+              <div className="rounded-[8px] border border-white/[0.06] bg-[#181817] p-3 text-[13px]">
+                <div className="font-serif text-[22px] font-light text-[#f9f8f6]">
+                  $9<span className="font-sans text-[12px] text-[#f9f8f6]/40">/mo</span>
+                </div>
+                <div className="mt-1 text-[11.5px] leading-relaxed text-[#f9f8f6]/50">
+                  3 active services detected across GitHub, Neon, and AWS.
+                </div>
+                <div className="mt-2 text-[11px] text-[#66cc63]">
+                  ✓ Stripe billing verified
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
     </section>
   );
