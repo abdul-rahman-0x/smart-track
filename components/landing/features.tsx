@@ -279,7 +279,7 @@ export default function Features() {
                                     Recurring Expenses
                                 </span>
                                 <p className="mt-0.5 font-serif text-2xl font-light text-[#f9f8f6]">
-                                    $48.00 <span className="font-sans text-xs text-[#f9f8f6]/50">/month</span>
+                                    $9.00 <span className="font-sans text-xs text-[#f9f8f6]/50">/month</span>
                                 </p>
                             </div>
                             <span className="rounded-[4px] border border-white/10 bg-[#20201f] px-2 py-0.5 font-mono text-[10.5px] text-[#66cc63]">
