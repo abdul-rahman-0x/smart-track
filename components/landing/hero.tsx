@@ -1,217 +1,304 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { HeroMarquee } from "../hero-marquee";
 
+interface HabitItem {
+  id: string;
+  title: string;
+  tag: string;
+  completed: boolean;
+  streak: number;
+}
+
 export default function Hero() {
+  const [habits, setHabits] = useState<HabitItem[]>([
+    {
+      id: "1",
+      title: "Deep Work (90m Focus Block)",
+      tag: "Engineering",
+      completed: true,
+      streak: 14,
+    },
+    {
+      id: "2",
+      title: "Distributed Systems Reading",
+      tag: "Academic",
+      completed: true,
+      streak: 8,
+    },
+    {
+      id: "3",
+      title: "Evening Code Review & Plan",
+      tag: "Milestone",
+      completed: false,
+      streak: 5,
+    },
+  ]);
+
+  const toggleHabit = (id: string) => {
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id ? { ...h, completed: !h.completed } : h
+      )
+    );
+  };
+
   return (
     <section
       id="home"
-      className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col overflow-hidden px-4 pt-28 pb-8 sm:pt-32 lg:pt-24">
-      {/* Background Soft Glow Ambient Light */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-87.5 h-87.5 bg-stone-500/10 dark:bg-stone-100/5 rounded-full blur-[90px] -z-10" />
+      className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-4 pt-32 pb-20 sm:pt-36"
+    >
+      {/* 1. Casca Tag / Badge: Crisp 4-Word Social Proof (No Border, 6px Radius) */}
+      <div className="mb-5 flex justify-center">
+        <div className="inline-flex items-center gap-2 rounded-[6px] bg-[#1c1b1a] px-3 py-1 text-[16px] font-normal text-[#f9f8f6]">
+          <div className="h-4 w-4 shrink-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="100%"
+              height="100%"
+              viewBox="0 0 16 17"
+              fill="none"
+              preserveAspectRatio="xMidYMid meet"
+              aria-hidden="true"
+            >
+              <mask
+                id="mask_hero_shield"
+                style={{ maskType: "alpha" }}
+                maskUnits="userSpaceOnUse"
+                x="0"
+                y="0"
+                width="16"
+                height="17"
+              >
+                <rect y="0.5" width="16" height="16" fill="#D9D9D9" />
+              </mask>
+              <g mask="url(#mask_hero_shield)">
+                <path
+                  d="M7.06683 11.5667L11.7668 6.86668L10.8335 5.93334L7.06683 9.70001L5.16683 7.80001L4.2335 8.73334L7.06683 11.5667ZM8.00016 15.1667C7.07794 15.1667 6.21127 14.9917 5.40016 14.6417C4.58905 14.2917 3.8835 13.8167 3.2835 13.2167C2.6835 12.6167 2.2085 11.9111 1.8585 11.1C1.5085 10.2889 1.3335 9.42223 1.3335 8.50001C1.3335 7.57779 1.5085 6.71112 1.8585 5.90001C2.2085 5.0889 2.6835 4.38334 3.2835 3.78334C3.8835 3.18334 4.58905 2.70834 5.40016 2.35834C6.21127 2.00834 7.07794 1.83334 8.00016 1.83334C8.92238 1.83334 9.78905 2.00834 10.6002 2.35834C11.4113 2.70834 12.1168 3.18334 12.7168 3.78334C13.3168 4.38334 13.7918 5.0889 14.1418 5.90001C14.4918 6.71112 14.6668 7.57779 14.6668 8.50001C14.6668 9.42223 14.4918 10.2889 14.1418 11.1C13.7918 11.9111 13.3168 12.6167 12.7168 13.2167C12.1168 13.8167 11.4113 14.2917 10.6002 14.6417C9.78905 14.9917 8.92238 15.1667 8.00016 15.1667Z"
+                  fill="#66CC63"
+                />
+              </g>
+            </svg>
+          </div>
+          <span className="text-[14px]">Trusted by 10,000+ builders</span>
+        </div>
+      </div>
 
-      {/* Vertically centered grid container */}
-      <div className="grid flex-1 grid-cols-1 items-center gap-14 lg:grid-cols-12 lg:gap-16">
-        {/* Left Side */}
-        <div className="lg:col-span-6 space-y-8 text-center lg:text-left">
-          <div className="space-y-5">
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-[58px] tracking-tighter leading-[1.02] text-foreground">
-              Track everything
-              <span className="block font-sans font-light text-muted-foreground">
-                that matters.
-              </span>
-            </h1>
+      {/* 2. Balanced 2-Line Denton H1 (No Symbols, Natural Tracking) */}
+      <div className="mx-auto max-w-4xl text-center">
+        <h1 className="font-serif text-[56px] font-light leading-[1.04] tracking-normal text-[#f9f8f6] sm:text-[74px] md:text-[86px] lg:text-[96px]">
+          Track daily habits <br className="hidden sm:inline" />
+          10x faster
+        </h1>
+      </div>
 
-            <p className="max-w-xl mx-auto lg:mx-0 text-[17px] leading-8 text-muted-foreground font-sans">
-              Your habits, goals, and progress—all in one place. Designed to
-              help you stay focused and consistent every day.
-            </p>
+      {/* 3. Subtitle (Neue Montreal, Natural Line-Height & 60% Opacity) */}
+      <div className="mx-auto mt-6 max-w-[580px] text-center">
+        <p className="font-sans text-[15.5px] font-normal leading-[1.55] tracking-[-0.01em] text-[#f9f8f6]/60 sm:text-[16.5px]">
+          Eliminate fragmented tools. Smart Track unites daily streak tracking,
+          academic deadlines, and focus sessions into one calm workspace.
+        </p>
+      </div>
+
+      {/* 4. Secondary CTA Button */}
+      <div className="mt-8 flex justify-center">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center justify-center rounded-[7.4px] bg-[#e5e5e5] px-[16px] py-[11px] font-sans text-[14.8px] font-normal tracking-[-0.02em] text-[#0e0d0c] transition-colors duration-200 hover:bg-[#d8d8d8]"
+        >
+          Get started
+        </Link>
+      </div>
+
+      {/* 5. Live Product Viewport */}
+      <div className="relative mt-16 w-full max-w-5xl rounded-[16px] border border-white/[0.08] bg-[#161616] p-4  sm:p-7">
+        {/* Workspace Window Header */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-white/20" />
+            <span className="h-2 w-2 rounded-full bg-white/20" />
+            <span className="h-2 w-2 rounded-full bg-white/20" />
+            <span className="ml-3 font-sans text-[12.5px] font-medium tracking-[-0.01em] text-[#f9f8f6]">
+              Smart Track Workspace
+            </span>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3.5">
-              <Button
-                asChild
-                size="lg"
-                className="min-w-44 font-semibold shadow-md transition-all duration-300 hover:shadow-lg bg-primary text-primary-foreground hover:opacity-90">
-                <Link href="/dashboard">Get Started Free</Link>
-              </Button>
-
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="min-w-44 font-medium border-border hover:bg-accent hover:text-accent-foreground">
-                <Link href="#features">Explore Features</Link>
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-[11px] font-mono text-muted-foreground/80">
-              <span className="flex items-center gap-1.5">
-                <svg
-                  className="w-3.5 h-3.5 text-emerald-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.5 12.75l6 6 9-13.5"
-                  />
-                </svg>
-                No credit card required
-              </span>
-
-              <span className="flex items-center gap-1.5">
-                <svg
-                  className="w-3.5 h-3.5 text-emerald-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.5 12.75l6 6 9-13.5"
-                  />
-                </svg>
-                Secure authentication
-              </span>
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center gap-1.5 rounded-[4px] bg-[#20201f] px-2.5 py-1 text-[11px] font-sans text-[#f9f8f6]/70">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#66cc63]" />
+              <span>Session: 42m remaining</span>
             </div>
           </div>
         </div>
 
-        {/* Right Side */}
-        <div className="relative mx-auto mt-8 h-100 w-full max-w-md sm:h-107.5 sm:max-w-lg lg:col-span-6 lg:mt-0 lg:h-112.5">
-          {/* Layer 1 (Base): Habit Grid / Monthly Checklist Card */}
-          <div
-            className="absolute w-[80%] left-2 top-8 p-5 rounded-xl border border-border bg-card/60 backdrop-blur-xl shadow-xl transition-transform duration-500
-                    ">
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-stone-300 dark:bg-stone-700" />
-                <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
-                  Monthly Checklist
+        {/* Dashboard Interior Grid */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+          {/* Left Column: Interactive Habit Consistency Engine */}
+          <div className="flex flex-col rounded-[12px] border border-white/[0.06] bg-[#0e0d0c] p-5 lg:col-span-7">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <span className="font-sans text-[11px] font-normal uppercase tracking-wider text-[#f9f8f6]/40">
+                  Daily Habit Engine
                 </span>
+                <h4 className="mt-0.5 font-sans text-[14px] font-medium text-[#f9f8f6]">
+                  Active Routines
+                </h4>
               </div>
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-stone-200 dark:bg-stone-800" />
-                <span className="w-1.5 h-1.5 rounded-full bg-stone-200 dark:bg-stone-800" />
-              </div>
+              <span className="rounded-[4px] border border-[#66cc63]/30 bg-[#66cc63]/10 px-2 py-0.5 font-mono text-[11px] text-[#66cc63]">
+                🔥 14-Day Streak
+              </span>
             </div>
 
-            {/* Calendar Habit Matrix Representation */}
-            <div className="grid grid-cols-7 gap-1.5 pt-4">
-              {Array.from({ length: 28 }).map((_, index) => {
-                const isCompleted = [
-                  1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 15, 16, 19, 20, 22, 23,
-                ].includes(index);
-                return (
+            <div className="space-y-2.5">
+              {habits.map((habit) => (
+                <button
+                  key={habit.id}
+                  type="button"
+                  onClick={() => toggleHabit(habit.id)}
+                  className="flex w-full items-center justify-between rounded-[8px] border border-white/[0.04] bg-[#161616] p-3 text-left transition-colors duration-150 hover:bg-[#20201f]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-4 w-4 items-center justify-center rounded-[4px] border text-[10px] transition-all ${habit.completed
+                        ? "border-[#66cc63] bg-[#66cc63] text-[#0e0d0c] font-bold"
+                        : "border-white/20 bg-transparent text-transparent"
+                        }`}
+                    >
+                      ✓
+                    </div>
+                    <span
+                      className={`font-sans text-[16px] tracking-[-0.01em] transition-all ${habit.completed
+                        ? "text-[#f9f8f6]/50 line-through"
+                        : "text-[#f9f8f6]"
+                        }`}
+                    >
+                      {habit.title}
+                    </span>
+                  </div>
+
+                  <span className="rounded bg-[#20201f] px-2 py-0.5 font-sans text-[10.5px] text-[#f9f8f6]/50">
+                    {habit.tag}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Weekly Habit Matrix (M-S) */}
+            <div className="mt-5 border-t border-white/[0.06] pt-4">
+              <span className="font-sans text-[11px] text-[#f9f8f6]/50">
+                Weekly Completion Rhythm
+              </span>
+              <div className="mt-2.5 grid grid-cols-7 gap-1.5">
+                {[
+                  { day: "M", done: true },
+                  { day: "T", done: true },
+                  { day: "W", done: true },
+                  { day: "T", done: true },
+                  { day: "F", done: true },
+                  { day: "S", done: true },
+                  { day: "S", done: false },
+                ].map((item, index) => (
                   <div
                     key={index}
-                    className={`aspect-square rounded-md flex items-center justify-center text-[9px] font-mono border transition-colors ${
-                      isCompleted
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold"
-                        : "bg-muted/30 border-border text-muted-foreground"
-                    }`}>
-                    {isCompleted ? (
-                      <svg
-                        className="w-2.5 h-2.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4.5 12.75l6 6 9-13.5"
-                        />
-                      </svg>
-                    ) : (
-                      index + 1
-                    )}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <div
+                      className={`h-7 w-full rounded-[4px] transition-colors ${item.done ? "bg-[#66cc63]/25" : "bg-[#20201f]"
+                        }`}
+                    />
+                    <span className="font-mono text-[9.5px] text-[#f9f8f6]/40">
+                      {item.day}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Layer 2 (Middle Right): Focus Session Analytics Card */}
-          <div
-            className="absolute right-2 top-14 w-[45%] p-4 rounded-xl border border-border bg-card shadow-2xl transition-transform duration-500
-                    ">
-            <div className="flex items-center justify-between gap-1.5 mb-1">
-              <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
-                Focus Goal
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight text-foreground font-serif">
-              3.5 Hours
-            </span>
-            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border">
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
-                Daily Target Met
-              </span>
-            </div>
-          </div>
-
-          {/* Layer 3 (Bottom Right): Streamlined Focus Trend Card */}
-          <div className="absolute -left-2 bottom-4 w-[48%] p-4 rounded-xl border border-border bg-card/90 backdrop-blur-md shadow-2xl transition-all duration-500 z-20">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider font-sans">
-                  Focus Trend
-                </span>
-                <h3 className="text-xl font-serif text-foreground font-semibold">
-                  18.4 hrs
-                </h3>
+                ))}
               </div>
-              <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
-                +14%
-              </span>
+            </div>
+          </div>
+
+          {/* Right Column: Academic Timelines & Velocity */}
+          <div className="flex flex-col gap-4 lg:col-span-5">
+            <div className="rounded-[12px] border border-white/[0.06] bg-[#20201f] p-4.5">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="font-sans text-[11px] font-normal uppercase tracking-wider text-[#f9f8f6]/40">
+                  Deadlines &amp; Milestones
+                </span>
+                <span className="font-mono text-[11px] text-[#f9f8f6]/60">2 Pending</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-[6px] border border-white/[0.04] bg-[#161616] p-2.5">
+                  <div>
+                    <p className="font-sans text-[12.5px] font-medium text-[#f9f8f6]">
+                      Distributed Systems Final
+                    </p>
+                    <span className="font-mono text-[10.5px] text-[#f9f8f6]/40">
+                      Exam Prep • Dec 4
+                    </span>
+                  </div>
+                  <span className="rounded bg-[#66cc63]/10 px-2 py-0.5 font-mono text-[10.5px] text-[#66cc63]">
+                    In 3 days
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-[6px] border border-white/[0.04] bg-[#161616] p-2.5">
+                  <div>
+                    <p className="font-sans text-[12.5px] font-medium text-[#f9f8f6]">
+                      Stripe Webhook Handlers
+                    </p>
+                    <span className="font-mono text-[10.5px] text-[#f9f8f6]/40">
+                      Engineering • v2 Launch
+                    </span>
+                  </div>
+                  <span className="rounded bg-[#20201f] px-2 py-0.5 font-mono text-[10.5px] text-[#f9f8f6]/60">
+                    In 6 days
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Minimalist Sparkline */}
-            <div className="h-10 w-full flex items-end">
-              <svg
-                className="w-full h-8 text-emerald-500"
-                viewBox="0 0 100 20"
-                fill="none"
-                stroke="currentColor"
-                preserveAspectRatio="none">
-                {/* Crisp, clean bezier path */}
-                <path
-                  d="M0 18 C15 14, 30 16, 45 8 C60 0, 75 4, 100 2"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                />
-                {/* Active endpoint node */}
-                <circle cx="100" cy="2" r="2" fill="currentColor" />
-              </svg>
-            </div>
+            <div className="flex flex-1 flex-col justify-between rounded-[12px] border border-white/[0.06] bg-[#20201f] p-4.5">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="font-sans text-[11px] font-normal uppercase tracking-wider text-[#f9f8f6]/40">
+                    Weekly Focus Time
+                  </span>
+                  <span className="font-mono text-[10.5px] text-[#66cc63]">+14% vs last week</span>
+                </div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="font-serif text-3xl font-light text-[#f9f8f6]">
+                    19.4 hrs
+                  </span>
+                  <span className="font-sans text-[11.5px] text-[#f9f8f6]/50">
+                    logged
+                  </span>
+                </div>
+              </div>
 
-            {/* Compact Days Indicator */}
-            <div className="flex justify-between mt-2 px-0.5 text-[9px] font-mono text-muted-foreground">
-              <span>M</span>
-              <span>T</span>
-              <span>W</span>
-              <span>T</span>
-              <span>F</span>
-              <span>S</span>
-              <span>S</span>
+              <div className="mt-3 flex h-8 w-full items-end">
+                <svg
+                  className="h-full w-full text-[#66cc63]"
+                  viewBox="0 0 100 20"
+                  fill="none"
+                  stroke="currentColor"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M0 16 C20 14, 40 18, 60 6 C80 0, 90 4, 100 2"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="100" cy="2" r="2.5" fill="currentColor" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Infinite Integrations Marquee component */}
-      <div className="mt-12 lg:mt-16">
+      {/* Infinite Partner Marquee */}
+      <div className="mt-16 w-full">
         <HeroMarquee />
       </div>
     </section>
