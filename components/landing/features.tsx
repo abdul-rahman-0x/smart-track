@@ -99,7 +99,7 @@ export default function Features() {
 
                     {/* Copy */}
                     <div className="space-y-4 lg:col-span-6 lg:pl-6">
-                        <h3 className="font-serif text-2xl font-light  text-[#f9f8f6] sm:text-[38px] sm:text-[44px] lg:text-[48px]">
+                        <h3 className="font-serif text-2xl font-light leading-[1.08] text-[#f9f8f6] sm:text-[38px] sm:text-[44px] lg:text-[48px]">
                             Automate consistency with daily streak engines
                         </h3>
                         <p className="max-w-md font-sans text-[15.5px] font-normal leading-[1.6] text-[#f9f8f6]/60">
