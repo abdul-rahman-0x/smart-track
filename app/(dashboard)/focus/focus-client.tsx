@@ -13,8 +13,10 @@ import {
     Timer,
     Coffee,
     Settings2,
+    CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface FocusClientProps {
     initialFocusCount: number;
@@ -34,15 +36,32 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
     });
 
     const [secondsLeft, setSecondsLeft] = useState(customTimes.focus * 60);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // --- Native Web Audio Chime (Zero External Files Needed) ---
-    const playSoftChime = useCallback(() => {
+    // References for drift-free timestamp calculation and audio safety
+    const endTimeRef = useRef<number | null>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+
+    // Initialize AudioContext on user gesture to bypass browser autoplay blocks
+    const unlockAudioContext = useCallback(() => {
         try {
-            const AudioCtx =
-                window.AudioContext ||
-                (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-            const ctx = new AudioCtx();
+            if (!audioCtxRef.current && typeof window !== "undefined") {
+                const AudioCtx =
+                    window.AudioContext ||
+                    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+                if (AudioCtx) audioCtxRef.current = new AudioCtx();
+            }
+            if (audioCtxRef.current?.state === "suspended") {
+                audioCtxRef.current.resume();
+            }
+        } catch {
+            // Audio context unavailable
+        }
+    }, []);
+
+    const playChime = useCallback(() => {
+        try {
+            if (!audioCtxRef.current) return;
+            const ctx = audioCtxRef.current;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
@@ -50,7 +69,7 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
             osc.frequency.setValueAtTime(587.33, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.25);
 
-            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
 
             osc.connect(gain);
@@ -58,19 +77,19 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
             osc.start();
             osc.stop(ctx.currentTime + 0.8);
         } catch {
-            // Audio blocked by browser policy until user gesture
+            // Audio block fallback
         }
     }, []);
 
-    // --- Live Browser Tab Title ---
+    // Synchronize browser tab title
     useEffect(() => {
         if (isRunning) {
             const mins = Math.floor(secondsLeft / 60);
             const secs = secondsLeft % 60;
             const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-            document.title = `(${formatted}) ${mode === "focus" ? "🎯 Focus" : "☕ Break"} | SmartTrack`;
+            document.title = `(${formatted}) ${mode === "focus" ? "Focus" : "Break"} | SmartTrack`;
         } else {
-            document.title = "Deep Work | SmartTrack";
+            document.title = "Deep Work Session | SmartTrack";
         }
 
         return () => {
@@ -78,19 +97,20 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
         };
     }, [secondsLeft, isRunning, mode]);
 
-    // --- Switch Modes ---
     const switchMode = useCallback(
         (newMode: TimerMode, durationMinutes?: number) => {
             setIsRunning(false);
+            endTimeRef.current = null;
             setMode(newMode);
             const mins = durationMinutes ?? customTimes[newMode];
             setSecondsLeft(mins * 60);
         },
-        [customTimes],
+        [customTimes]
     );
 
     const applyPreset = (focusMins: number, breakMins: number) => {
         setIsRunning(false);
+        endTimeRef.current = null;
         setCustomTimes({ focus: focusMins, shortBreak: breakMins });
         setSecondsLeft(mode === "focus" ? focusMins * 60 : breakMins * 60);
     };
@@ -109,61 +129,83 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
         });
     };
 
-    // --- Timer Lifecycle Handler ---
     const handleTimerComplete = useCallback(async () => {
-        playSoftChime();
+        playChime();
+        setIsRunning(false);
+        endTimeRef.current = null;
 
         if (mode === "focus") {
-            await logCompletedSession();
-            setFocusCount((prev) => prev + 1);
+            try {
+                await logCompletedSession();
+                setFocusCount((prev) => prev + 1);
+                toast.success("Focus block completed. Transitioning to recharge interval.");
+            } catch {
+                toast.error("Could not record session completion.");
+            }
             switchMode("shortBreak");
         } else {
+            toast.info("Recharge complete. Ready for next sprint.");
             switchMode("focus");
         }
-    }, [mode, playSoftChime, switchMode]);
+    }, [mode, playChime, switchMode]);
 
-    // Keep reference updated to avoid stale closures in interval
     const handleTimerCompleteRef = useRef(handleTimerComplete);
     useEffect(() => {
         handleTimerCompleteRef.current = handleTimerComplete;
     }, [handleTimerComplete]);
 
-    // Single interval effect without cascading renders
+    // Drift-proof delta interval
     useEffect(() => {
         if (!isRunning) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            endTimeRef.current = null;
             return;
         }
 
-        intervalRef.current = setInterval(() => {
-            setSecondsLeft((prev) => {
-                if (prev <= 1) {
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    setTimeout(() => {
-                        handleTimerCompleteRef.current();
-                    }, 0);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+        if (!endTimeRef.current) {
+            endTimeRef.current = Date.now() + secondsLeft * 1000;
+        }
 
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-    }, [isRunning]);
+        const intervalId = setInterval(() => {
+            if (!endTimeRef.current) return;
+            const remainingMs = endTimeRef.current - Date.now();
+            const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
 
-    const toggleTimer = () => setIsRunning(!isRunning);
+            setSecondsLeft(remainingSecs);
+
+            if (remainingSecs <= 0) {
+                clearInterval(intervalId);
+                handleTimerCompleteRef.current();
+            }
+        }, 250);
+
+        return () => clearInterval(intervalId);
+    }, [isRunning, secondsLeft]);
+
+    const toggleTimer = () => {
+        unlockAudioContext();
+        if (!isRunning) {
+            endTimeRef.current = Date.now() + secondsLeft * 1000;
+        } else {
+            endTimeRef.current = null;
+        }
+        setIsRunning(!isRunning);
+    };
 
     const resetTimer = () => {
         setIsRunning(false);
+        endTimeRef.current = null;
         setSecondsLeft(customTimes[mode] * 60);
     };
 
     const handleResetSessions = async () => {
-        await resetTodayFocusSessions();
-        setFocusCount(0);
-        resetTimer();
+        try {
+            await resetTodayFocusSessions();
+            setFocusCount(0);
+            resetTimer();
+            toast.success("Daily session counters cleared.");
+        } catch {
+            toast.error("Failed to reset session ledger.");
+        }
     };
 
     const formatTime = (secs: number) => {
@@ -172,110 +214,107 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
         return `${String(mins).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
     };
 
-    // SVG Progress Calculations (r = 44, circumference ≈ 276.46)
+    // SVG Progress calculation (r = 44, circumference ≈ 276.46)
     const maxTime = customTimes[mode] * 60;
     const progressPercentage = ((maxTime - secondsLeft) / maxTime) * 100;
     const circumference = 276.46;
     const strokeDashoffset = circumference - (circumference * progressPercentage) / 100;
 
     return (
-        <div className="relative space-y-10 pb-16 max-w-xl mx-auto text-center">
-            {/* Ambient Lighting Glow (using canonical Tailwind /4 opacity) */}
-            <div
-                className={cn(
-                    "absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 blur-3xl pointer-events-none rounded-full transition-colors duration-700",
-                    mode === "focus" ? "bg-emerald-500/4" : "bg-indigo-500/4",
-                )}
-            />
-
-            {/* --- HEADER --- */}
-            <div className="space-y-1.5">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary border border-border/80 text-xs font-semibold text-foreground mb-1">
-                    <Timer className="size-3.5 text-emerald-500" />
-                    <span>Deep Work Engine</span>
+        <div className="space-y-8 pb-16 max-w-xl mx-auto selection:bg-[#F9F8F6]/20">
+            {/* Header */}
+            <header className="space-y-1.5 text-center">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[6px] bg-[#161616] border border-[#F9F8F6]/[0.08] text-xs font-mono text-[#F9F8F6]/80 mb-1">
+                    <Timer className="size-3.5 text-[#66CC63]" />
+                    <span>DEEP WORK PROTOCOL</span>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    Focus State
+                <h1 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.028em] text-[#F9F8F6]">
+                    Execution Focus Engine
                 </h1>
-                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Block digital noise, quiet your mind, and execute distraction-free study sprints.
+                <p className="text-sm font-sans text-[#F9F8F6]/60 max-w-sm mx-auto">
+                    Single-task isolation timer calibrated for uninterrupted focus sprints.
                 </p>
-            </div>
+            </header>
 
-            {/* --- MAIN FOCUS CARD --- */}
-            <div className="rounded-2xl border border-border/90 bg-card p-6 sm:p-8 card-elevation space-y-7 relative">
-                {/* Mode Selector Switch */}
-                <div className="flex justify-center gap-1.5 bg-secondary/50 p-1 rounded-xl border border-border/60 max-w-xs mx-auto">
+            {/* Main Focus Console */}
+            <div className="rounded-[16px] border border-[#F9F8F6]/[0.08] bg-[#161616] p-6 sm:p-8 space-y-7">
+                {/* Mode Selector */}
+                <div className="flex justify-center gap-1.5 bg-[#0E0D0C] p-1 rounded-[8px] border border-[#F9F8F6]/[0.08] max-w-xs mx-auto">
                     <button
                         type="button"
                         onClick={() => switchMode("focus")}
                         className={cn(
-                            "flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5",
+                            "flex-1 py-1.5 px-3 text-xs font-mono rounded-[6px] transition-colors flex items-center justify-center gap-1.5",
                             mode === "focus"
-                                ? "bg-card text-foreground font-semibold card-elevation"
-                                : "text-muted-foreground hover:text-foreground",
-                        )}>
-                        <Flame className={cn("size-3.5", mode === "focus" ? "text-emerald-500 fill-current" : "")} />
+                                ? "bg-[#20201F] text-[#F9F8F6] border border-[#F9F8F6]/[0.1] font-medium"
+                                : "text-[#F9F8F6]/40 hover:text-[#F9F8F6]"
+                        )}
+                    >
+                        <Flame className={cn("size-3.5", mode === "focus" ? "text-[#FBBF24] fill-current" : "")} />
                         Focus ({customTimes.focus}m)
                     </button>
                     <button
                         type="button"
                         onClick={() => switchMode("shortBreak")}
                         className={cn(
-                            "flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5",
+                            "flex-1 py-1.5 px-3 text-xs font-mono rounded-[6px] transition-colors flex items-center justify-center gap-1.5",
                             mode === "shortBreak"
-                                ? "bg-card text-foreground font-semibold card-elevation"
-                                : "text-muted-foreground hover:text-foreground",
-                        )}>
-                        <Coffee className={cn("size-3.5", mode === "shortBreak" ? "text-indigo-400" : "")} />
+                                ? "bg-[#20201F] text-[#F9F8F6] border border-[#F9F8F6]/[0.1] font-medium"
+                                : "text-[#F9F8F6]/40 hover:text-[#F9F8F6]"
+                        )}
+                    >
+                        <Coffee className={cn("size-3.5", mode === "shortBreak" ? "text-[#F9F8F6]" : "")} />
                         Break ({customTimes.shortBreak}m)
                     </button>
                 </div>
 
-                {/* Quick Presets Row */}
+                {/* Preset Selector */}
                 <div className="flex items-center justify-center gap-2">
                     <button
                         type="button"
                         onClick={() => applyPreset(25, 5)}
                         className={cn(
-                            "text-[11px] font-medium px-2.5 py-1 rounded-md border transition-all",
+                            "text-xs font-mono px-3 py-1 rounded-[6px] border transition-colors",
                             customTimes.focus === 25 && customTimes.shortBreak === 5
-                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                                : "bg-secondary/40 text-muted-foreground border-border/60 hover:text-foreground",
-                        )}>
-                        25 / 5m Classic
+                                ? "bg-[#20201F] text-[#F9F8F6] border-[#F9F8F6]/20 font-medium"
+                                : "bg-transparent text-[#F9F8F6]/50 border-[#F9F8F6]/[0.08] hover:text-[#F9F8F6] hover:bg-[#20201F]/40"
+                        )}
+                    >
+                        25/5 Standard
                     </button>
                     <button
                         type="button"
                         onClick={() => applyPreset(50, 10)}
                         className={cn(
-                            "text-[11px] font-medium px-2.5 py-1 rounded-md border transition-all",
+                            "text-xs font-mono px-3 py-1 rounded-[6px] border transition-colors",
                             customTimes.focus === 50 && customTimes.shortBreak === 10
-                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                                : "bg-secondary/40 text-muted-foreground border-border/60 hover:text-foreground",
-                        )}>
-                        50 / 10m Deep
+                                ? "bg-[#20201F] text-[#F9F8F6] border-[#F9F8F6]/20 font-medium"
+                                : "bg-transparent text-[#F9F8F6]/50 border-[#F9F8F6]/[0.08] hover:text-[#F9F8F6] hover:bg-[#20201F]/40"
+                        )}
+                    >
+                        50/10 Extended
                     </button>
                     <button
                         type="button"
                         onClick={() => setShowCustomConfig(!showCustomConfig)}
                         className={cn(
-                            "text-[11px] font-medium px-2 py-1 rounded-md border transition-all flex items-center gap-1",
+                            "text-xs font-mono px-2.5 py-1 rounded-[6px] border transition-colors flex items-center gap-1",
                             showCustomConfig
-                                ? "bg-secondary text-foreground border-border"
-                                : "bg-secondary/20 text-muted-foreground border-border/40 hover:text-foreground",
-                        )}>
+                                ? "bg-[#20201F] text-[#F9F8F6] border-[#F9F8F6]/20"
+                                : "bg-transparent text-[#F9F8F6]/50 border-[#F9F8F6]/[0.08] hover:text-[#F9F8F6]"
+                        )}
+                    >
                         <Settings2 className="size-3" />
-                        Custom
+                        Config
                     </button>
                 </div>
 
-                {/* Collapsible Custom Minute Configuration */}
+                {/* Custom Duration Panel */}
                 {showCustomConfig && (
-                    <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-secondary/30 border border-border/60 max-w-sm mx-auto">
+                    <div className="grid grid-cols-2 gap-3 p-3.5 rounded-[8px] bg-[#0E0D0C] border border-[#F9F8F6]/[0.08] max-w-sm mx-auto">
                         <div className="space-y-1">
-                            <span className="block text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                                Focus Mins
+                            <span className="block text-[10px] font-mono uppercase text-[#F9F8F6]/60 tracking-wider">
+                                Focus (Minutes)
                             </span>
                             <Input
                                 type="number"
@@ -284,12 +323,12 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                                 value={customTimes.focus}
                                 disabled={isRunning}
                                 onChange={(e) => handleCustomTimeChange("focus", e.target.value)}
-                                className="h-8 text-center text-xs bg-card border-border/80 shadow-none font-semibold"
+                                className="h-8 text-center text-xs font-mono bg-[#161616] border-[#F9F8F6]/[0.1] text-[#F9F8F6] rounded-[6px]"
                             />
                         </div>
                         <div className="space-y-1">
-                            <span className="block text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                                Break Mins
+                            <span className="block text-[10px] font-mono uppercase text-[#F9F8F6]/60 tracking-wider">
+                                Break (Minutes)
                             </span>
                             <Input
                                 type="number"
@@ -298,36 +337,34 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                                 value={customTimes.shortBreak}
                                 disabled={isRunning}
                                 onChange={(e) => handleCustomTimeChange("shortBreak", e.target.value)}
-                                className="h-8 text-center text-xs bg-card border-border/80 shadow-none font-semibold"
+                                className="h-8 text-center text-xs font-mono bg-[#161616] border-[#F9F8F6]/[0.1] text-[#F9F8F6] rounded-[6px]"
                             />
                         </div>
                     </div>
                 )}
 
-                {/* Circular Animated SVG Countdown Ring */}
+                {/* Minimalist Countdown Ring */}
                 <div className="relative w-64 h-64 mx-auto flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Background track circle */}
+                        {/* Background Track */}
                         <circle
                             cx="50"
                             cy="50"
                             r="44"
-                            className="stroke-secondary"
-                            strokeWidth="3.5"
+                            className="stroke-[#20201F]"
+                            strokeWidth="2.5"
                             fill="transparent"
                         />
-                        {/* Active Progress Circle */}
+                        {/* Active Progress Arc */}
                         <circle
                             cx="50"
                             cy="50"
                             r="44"
                             className={cn(
-                                "transition-all duration-500",
-                                mode === "focus"
-                                    ? "stroke-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                                    : "stroke-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.3)]",
+                                "transition-all duration-300",
+                                mode === "focus" ? "stroke-[#F9F8F6]" : "stroke-[#66CC63]"
                             )}
-                            strokeWidth="3.5"
+                            strokeWidth="2.5"
                             fill="transparent"
                             strokeDasharray={circumference}
                             strokeDashoffset={strokeDashoffset}
@@ -335,30 +372,31 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                         />
                     </svg>
 
-                    {/* Centered Digital Countdown Display */}
+                    {/* Centered Digital Readout */}
                     <div className="absolute flex flex-col items-center">
-                        <span className="text-5xl font-bold tracking-tight tabular-nums text-foreground">
+                        <span className="text-5xl sm:text-6xl font-mono font-medium tracking-tight text-[#F9F8F6] tabular-nums">
                             {formatTime(secondsLeft)}
                         </span>
-                        <span className="text-[11px] font-medium text-muted-foreground mt-1 uppercase tracking-widest">
-                            {mode === "focus" ? (isRunning ? "Sprinting" : "Ready") : "Recharging"}
+                        <span className="text-[11px] font-mono text-[#F9F8F6]/40 mt-1 uppercase tracking-wider">
+                            {mode === "focus" ? (isRunning ? "RUNNING" : "STANDBY") : "RECHARGING"}
                         </span>
                     </div>
                 </div>
 
-                {/* Primary Action Controls */}
+                {/* Actions */}
                 <div className="flex items-center justify-center gap-3">
                     <Button
                         onClick={toggleTimer}
                         size="lg"
                         className={cn(
-                            "btn-tactile h-11 px-8 text-sm font-semibold flex items-center gap-2",
+                            "h-11 px-8 text-xs font-sans font-medium rounded-[8px] flex items-center gap-2 transition-colors",
                             isRunning
-                                ? "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
-                                : "bg-foreground text-background hover:bg-foreground/90",
-                        )}>
+                                ? "bg-[#20201F] text-[#F9F8F6] hover:bg-[#2A2A29] border border-[#F9F8F6]/[0.1]"
+                                : "bg-[#F9F8F6] text-[#0E0D0C] hover:bg-[#E5E5E5]"
+                        )}
+                    >
                         {isRunning ? <Pause className="size-4" /> : <Play className="size-4 fill-current" />}
-                        {isRunning ? "Pause Sprint" : "Start Sprint"}
+                        {isRunning ? "Pause Interval" : "Engage Interval"}
                     </Button>
 
                     <Button
@@ -366,33 +404,32 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                         size="lg"
                         variant="outline"
                         aria-label="Reset Timer"
-                        className="size-11 p-0 border-border hover:bg-secondary text-muted-foreground hover:text-foreground">
+                        className="size-11 p-0 border-[#F9F8F6]/[0.12] bg-transparent hover:bg-[#20201F] text-[#F9F8F6]/60 hover:text-[#F9F8F6] rounded-[8px]"
+                    >
                         <RotateCcw className="size-4" />
                     </Button>
                 </div>
 
-                {/* Session Tally & Daily Momentum */}
-                <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                            Today&apos;s Focus Blocks:
-                        </span>
-                        <div className="flex items-center gap-1">
+                {/* Daily Ledger Strip */}
+                <div className="pt-5 border-t border-[#F9F8F6]/[0.06] flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2.5">
+                        <span className="text-[#F9F8F6]/60">TODAY:</span>
+                        <div className="flex items-center gap-1.5">
                             {Array.from({ length: Math.max(4, focusCount) }).map((_, i) => (
                                 <div
                                     key={i}
                                     className={cn(
-                                        "size-2 rounded-full transition-all",
+                                        "size-2 rounded-full transition-colors",
                                         i < focusCount
-                                            ? "bg-emerald-500 shadow-xs shadow-emerald-500/50"
-                                            : "bg-secondary border border-border/80",
+                                            ? "bg-[#66CC63]"
+                                            : "bg-[#20201F] border border-[#F9F8F6]/[0.1]"
                                     )}
-                                    title={`Session ${i + 1}`}
+                                    title={`Block ${i + 1}`}
                                 />
                             ))}
                         </div>
-                        <span className="font-semibold text-foreground ml-1 tabular-nums">
-                            {focusCount} {focusCount === 1 ? "block" : "blocks"}
+                        <span className="text-[#F9F8F6] font-medium ml-1 tabular-nums">
+                            {focusCount} {focusCount === 1 ? "sprint" : "sprints"}
                         </span>
                     </div>
 
@@ -400,28 +437,27 @@ export function FocusClient({ initialFocusCount }: FocusClientProps) {
                         <button
                             type="button"
                             onClick={handleResetSessions}
-                            className="text-[11px] text-muted-foreground hover:text-destructive underline decoration-muted-foreground/30 transition-colors">
+                            className="text-[11px] font-mono text-[#F9F8F6]/40 hover:text-[#F87171] transition-colors"
+                        >
                             Reset Tally
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Achievement Milestone Banner (using canonical Tailwind /4 opacity) */}
+            {/* Daily Milestone Banner */}
             {focusCount >= 4 && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/4 p-4 text-center card-elevation flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 text-left">
-                        <div className="size-9 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                            <Sparkles className="size-5 fill-current" />
-                        </div>
-                        <div>
-                            <h4 className="text-xs font-semibold text-foreground">
-                                Daily Target Met (100+ Mins Logged) 🎯
-                            </h4>
-                            <p className="text-[11px] text-muted-foreground">
-                                Outstanding mental stamina. You have entered deep flow state today.
-                            </p>
-                        </div>
+                <div className="rounded-[16px] border border-[#F9F8F6]/[0.08] bg-[#161616] p-4 flex items-center gap-3.5">
+                    <div className="size-9 rounded-[8px] bg-[#20201F] text-[#66CC63] flex items-center justify-center shrink-0 border border-[#F9F8F6]/[0.08]">
+                        <CheckCircle2 className="size-5" />
+                    </div>
+                    <div className="text-left space-y-0.5">
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-[#F9F8F6]">
+                            Target Volume Satisfied (100m+ Logged)
+                        </h4>
+                        <p className="text-xs font-sans text-[#F9F8F6]/60">
+                            High-intensity deep work quota logged to database for today.
+                        </p>
                     </div>
                 </div>
             )}

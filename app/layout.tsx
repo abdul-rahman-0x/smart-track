@@ -1,52 +1,36 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
-// 1. Casca Body / UI Font
-const neueMontreal = localFont({
-    src: [
-        {
-            path: "./fonts/NeueMontreal-Regular.otf",
-            weight: "400",
-            style: "normal",
-        },
-        {
-            path: "./fonts/NeueMontreal-Medium.otf",
-            weight: "500",
-            style: "normal",
-        },
-    ],
+const sans = Geist({
+    subsets: ["latin"],
     variable: "--font-sans",
-    display: "swap",
 });
 
-// 2. Authentic Casca Denton Variable Display Serif
-const denton = localFont({
-    src: "./fonts/Denton-Variable.woff2",
+const mono = Geist_Mono({
+    subsets: ["latin"],
+    variable: "--font-mono",
+});
+
+const serif = Instrument_Serif({
+    subsets: ["latin"],
+    weight: "400",
     variable: "--font-serif",
-    display: "swap",
-    weight: "100 900", // CRITICAL: unlocks full width & weight axes for Denton
 });
 
 export const metadata: Metadata = {
-    title: "Smart Track",
-    description:
-        "A simple and clean planner to manage your daily tasks, habits, and academic milestones.",
+    title: "SmartTrack | Productivity Workspace",
+    description: "Minimalist workspace for task planning, habit streaks, and academic milestones.",
 };
 
 export default function RootLayout({
     children,
-}: Readonly<{
+}: {
     children: React.ReactNode;
-}>) {
+}) {
     return (
-        <html
-            lang="en"
-            data-scroll-behavior="smooth"
-            className={`${neueMontreal.variable} ${denton.variable} dark antialiased`}
-            style={{ colorScheme: "dark" }}
-        >
-            <body className="min-h-screen bg-background font-sans text-foreground">
+        <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable} dark`}>
+            <body className="min-h-screen bg-[#0E0D0C] text-[#F9F8F6] antialiased">
                 {children}
             </body>
         </html>

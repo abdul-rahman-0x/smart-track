@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useOptimistic, useTransition } from "react";
+import Link from "next/link";
 import { createExam, deleteExam, addSyllabusTopic } from "./actions";
 import { toggleTask, deleteTask } from "../planner/actions";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,6 @@ import {
     Trash2,
     Plus,
     Timer,
-    CheckCircle2,
     AlertTriangle,
     GraduationCap,
     BookOpen,
@@ -21,24 +21,46 @@ import {
     ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format, differenceInCalendarDays, isPast, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 interface Exam {
     id: string;
     subject: string;
-    date: Date;
+    date: Date | string;
     notes: string | null;
 }
+
 interface SyllabusTask {
     id: string;
     title: string;
     completed: boolean;
 }
+
 interface ExamsClientProps {
     initialExams: Exam[];
     initialSyllabusTasks: SyllabusTask[];
     isPro: boolean;
+}
+
+type OptimisticExamAction =
+    | { type: "DELETE_EXAM"; id: string }
+    | { type: "ADD_EXAM"; exam: Exam };
+
+type OptimisticTaskAction =
+    | { type: "TOGGLE_TASK"; id: string; completed: boolean }
+    | { type: "DELETE_TASK"; id: string }
+    | { type: "ADD_TASK"; task: SyllabusTask };
+
+const MAX_FREE_EXAMS = 3;
+
+function parseDateSafely(d: Date | string): Date {
+    const parsed = typeof d === "string" ? new Date(d) : d;
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function cleanModuleTitle(raw: string): string {
+    return raw.replace(/\[EXAM:.*?\]\s*/g, "").trim();
 }
 
 export function ExamsClient({
@@ -46,92 +68,278 @@ export function ExamsClient({
     initialSyllabusTasks,
     isPro,
 }: ExamsClientProps) {
+    const [, startTransition] = useTransition();
     const [subject, setSubject] = useState("");
     const [date, setDate] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [syllabusInputs, setSyllabusInputs] = useState<Record<string, string>>({});
 
+    // Optimistic UI buffers
+    const [optimisticExams, setOptimisticExams] = useOptimistic(
+        initialExams,
+        (state: Exam[], action: OptimisticExamAction) => {
+            switch (action.type) {
+                case "DELETE_EXAM":
+                    return state.filter((e) => e.id !== action.id);
+                case "ADD_EXAM":
+                    return [action.exam, ...state];
+                default:
+                    return state;
+            }
+        }
+    );
+
+    const [optimisticTasks, setOptimisticTasks] = useOptimistic(
+        initialSyllabusTasks,
+        (state: SyllabusTask[], action: OptimisticTaskAction) => {
+            switch (action.type) {
+                case "TOGGLE_TASK":
+                    return state.map((t) =>
+                        t.id === action.id ? { ...t, completed: action.completed } : t
+                    );
+                case "DELETE_TASK":
+                    return state.filter((t) => t.id !== action.id);
+                case "ADD_TASK":
+                    return [...state, action.task];
+                default:
+                    return state;
+            }
+        }
+    );
+
+    const isAtLimit = !isPro && optimisticExams.length >= MAX_FREE_EXAMS;
+    const isNearLimit = !isPro && optimisticExams.length >= MAX_FREE_EXAMS - 1;
+
+    // Macro metrics
+    const stats = useMemo(() => {
+        const totalRoadmaps = optimisticExams.length;
+        const totalModules = optimisticTasks.length;
+        const completedModules = optimisticTasks.filter((t) => t.completed).length;
+        const averageReadiness =
+            totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+
+        return { totalRoadmaps, totalModules, completedModules, averageReadiness };
+    }, [optimisticExams, optimisticTasks]);
+
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!subject.trim() || !date) {
-            toast.error("Please provide both subject name and exam date.");
+        const cleanSubject = subject.trim();
+        if (!cleanSubject || !date) {
+            toast.error("Subject and deadline are required.");
             return;
         }
+
+        if (isAtLimit) {
+            toast.error("Milestone capacity reached. Upgrade to Pro for unlimited roadmaps.");
+            return;
+        }
+
         setIsCreating(true);
-        try {
-            await createExam(subject.trim(), date);
+        const tempId = `temp-exam-${crypto.randomUUID()}`;
+        const newExamDate = new Date(date);
+
+        startTransition(async () => {
+            setOptimisticExams({
+                type: "ADD_EXAM",
+                exam: {
+                    id: tempId,
+                    subject: cleanSubject,
+                    date: newExamDate,
+                    notes: null,
+                },
+            });
+
             setSubject("");
             setDate("");
-            toast.success("Exam milestone registered.");
-        } catch (error) {
-            if (
-                error instanceof Error &&
-                error.message === "PRO_LIMIT_REACHED"
-            ) {
-                toast.error("Upgrade to Pro to track unlimited exam roadmaps.");
-            } else {
-                toast.error("Failed to register milestone.");
+
+            try {
+                await createExam(cleanSubject, date);
+                toast.success("Target milestone registered.");
+            } catch (error) {
+                if (error instanceof Error && error.message === "PRO_LIMIT_REACHED") {
+                    toast.error("Plan limit reached. Upgrade to Pro.");
+                } else {
+                    toast.error("Failed to commit milestone.");
+                }
+            } finally {
+                setIsCreating(false);
             }
-        } finally {
-            setIsCreating(false);
-        }
+        });
     };
 
-    const handleAddTopic = async (examId: string, examDate: Date) => {
+    const handleDeleteExam = (examId: string) => {
+        startTransition(async () => {
+            setOptimisticExamAction(examId);
+            try {
+                await deleteExam(examId);
+                toast.success("Milestone purged.");
+            } catch {
+                toast.error("Failed to delete milestone.");
+            }
+        });
+    };
+
+    const setOptimisticExamAction = (id: string) => {
+        setOptimisticExams({ type: "DELETE_EXAM", id });
+    };
+
+    const handleAddTopic = (examId: string, examDate: Date) => {
         const topicName = (syllabusInputs[examId] || "").trim();
         if (!topicName) return;
 
-        try {
-            await addSyllabusTopic(examId, topicName, examDate.toString());
+        // Use native UUID generation instead of impure Date.now()
+        const tempId = `temp-task-${crypto.randomUUID()}`;
+        const fullTitle = `[EXAM:${examId}] ${topicName}`;
+
+        startTransition(async () => {
+            setOptimisticTasks({
+                type: "ADD_TASK",
+                task: {
+                    id: tempId,
+                    title: fullTitle,
+                    completed: false,
+                },
+            });
+
             setSyllabusInputs((prev) => ({ ...prev, [examId]: "" }));
-            toast.success("Syllabus module added.");
-        } catch {
-            toast.error("Failed to add syllabus module.");
-        }
+
+            try {
+                await addSyllabusTopic(examId, topicName, examDate.toISOString());
+                toast.success("Module appended to syllabus.");
+            } catch {
+                toast.error("Failed to add module.");
+            }
+        });
+    };
+
+    const handleToggleModule = (taskId: string, nextStatus: boolean) => {
+        startTransition(async () => {
+            setOptimisticTasks({
+                type: "TOGGLE_TASK",
+                id: taskId,
+                completed: nextStatus,
+            });
+            try {
+                await toggleTask(taskId, nextStatus);
+            } catch {
+                toast.error("Failed to update module state.");
+            }
+        });
+    };
+
+    const handleDeleteModule = (taskId: string) => {
+        startTransition(async () => {
+            setOptimisticTasks({ type: "DELETE_TASK", id: taskId });
+            try {
+                await deleteTask(taskId);
+                toast.success("Module removed.");
+            } catch {
+                toast.error("Failed to remove module.");
+            }
+        });
     };
 
     return (
-        <div className="relative space-y-10 pb-16 max-w-6xl mx-auto">
-            {/* Ambient Lighting */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-rose-500/[0.03] blur-3xl pointer-events-none rounded-full" />
-
-            {/* --- HEADER --- */}
-            <header className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/80">
-                <div>
-                    <div className="flex items-center gap-2.5">
-                        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
-                            Academic Milestones
+        <div className="space-y-8 pb-16 max-w-6xl mx-auto selection:bg-[#F9F8F6]/20">
+            {/* Header & Controls */}
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[#F9F8F6]/[0.08]">
+                <div className="space-y-1.5">
+                    <div className="flex items-center gap-3">
+                        <h1 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.028em] text-[#F9F8F6]">
+                            Academic Milestones & Syllabus
                         </h1>
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center gap-1">
-                            <GraduationCap className="size-3.5" />
-                            Target Prep
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#F9F8F6]/60 bg-[#161616] px-2 py-0.5 rounded-[4px] border border-[#F9F8F6]/[0.08]">
+                            VELOCITY
                         </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Map exam dates, monitor curriculum completion, and track required daily study velocity.
+                    <p className="text-sm font-sans text-[#F9F8F6]/60">
+                        Map assessment deadlines, manage curriculum breakdown, and automate pacing.
                     </p>
                 </div>
 
-                {!isPro ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border/80 card-elevation text-xs">
-                        <span className="text-muted-foreground font-medium">Free Milestone Limit:</span>
-                        <span className="font-bold text-foreground">
-                            {initialExams.length}/3
-                        </span>
+                {/* Tier Quota */}
+                {isPro ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] bg-[#20201F] text-[#F9F8F6] text-xs font-mono border border-[#F9F8F6]/[0.12]">
+                        <Sparkles className="size-3 text-[#66CC63]" />
+                        <span>UNLIMITED ROADMAPS</span>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500 text-xs font-medium border border-emerald-500/20">
-                        <Sparkles className="size-3" />
-                        <span>Pro Unlimited Roadmaps</span>
-                    </div>
+                    <Link
+                        href="/pricing"
+                        className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-[8px] border text-xs font-mono transition-colors",
+                            isAtLimit
+                                ? "bg-[#B42318]/15 border-[#B42318]/40 text-[#F87171] hover:bg-[#B42318]/25"
+                                : isNearLimit
+                                    ? "bg-[#FBBF24]/10 border-[#FBBF24]/30 text-[#FBBF24] hover:bg-[#FBBF24]/20"
+                                    : "bg-[#161616] border-[#F9F8F6]/[0.08] text-[#F9F8F6]/60 hover:border-[#F9F8F6]/20"
+                        )}
+                    >
+                        <span>ROADMAP CAP:</span>
+                        <span className="font-bold text-[#F9F8F6]">{optimisticExams.length}/{MAX_FREE_EXAMS}</span>
+                    </Link>
                 )}
             </header>
 
-            {/* --- CREATE MILESTONE COMMAND BAR --- */}
-            <div className="rounded-xl border border-border/90 bg-card p-5 card-elevation">
-                <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border/50 text-xs font-semibold text-foreground">
-                    <BookOpen className="size-4 text-rose-500" />
-                    <span>Register New Academic Target</span>
+            {/* Pro Upsell Alert on Limit */}
+            {!isPro && isAtLimit && (
+                <div className="rounded-[16px] border border-[#F9F8F6]/[0.12] bg-[#161616] p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#FBBF24]/15 text-[#FBBF24] border border-[#FBBF24]/30">
+                                Plan Gated
+                            </span>
+                            <span className="text-xs font-medium text-[#F9F8F6]">
+                                Maximum free roadmaps reached (3/3)
+                            </span>
+                        </div>
+                        <p className="text-xs text-[#F9F8F6]/60">
+                            Free tiers support up to 3 active target assessments. Upgrade to Pro for unmetered course roadmaps.
+                        </p>
+                    </div>
+                    <Button
+                        asChild
+                        size="sm"
+                        className="bg-[#F9F8F6] text-[#0E0D0C] hover:bg-[#E5E5E5] font-sans font-medium text-xs h-8 px-3.5 rounded-[8px] shrink-0"
+                    >
+                        <Link href="/pricing" className="flex items-center gap-1">
+                            Unlock All Roadmaps
+                            <ArrowUpRight className="size-3.5 stroke-[2.5]" />
+                        </Link>
+                    </Button>
+                </div>
+            )}
+
+            {/* Macro Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <MetricBox
+                    label="Syllabus Mastery"
+                    value={`${stats.averageReadiness}%`}
+                    detail={`${stats.completedModules} of ${stats.totalModules} modules cleared`}
+                    highlight
+                />
+                <MetricBox
+                    label="Tracked Targets"
+                    value={stats.totalRoadmaps.toString()}
+                    detail="Active examination courses"
+                />
+                <MetricBox
+                    label="Pending Modules"
+                    value={(stats.totalModules - stats.completedModules).toString()}
+                    detail="Remaining curriculum units"
+                />
+                <MetricBox
+                    label="Pacing Engine"
+                    value="Calculated"
+                    detail="Daily velocity recommendations"
+                />
+            </div>
+
+            {/* Register Target Command Bar */}
+            <div className="rounded-[16px] border border-[#F9F8F6]/[0.08] bg-[#161616] p-5">
+                <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#F9F8F6]/[0.06] text-xs font-mono uppercase tracking-wider text-[#F9F8F6]/60">
+                    <BookOpen className="size-3.5" />
+                    <span>Register Academic Milestone</span>
                 </div>
 
                 <form onSubmit={onCreate} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
@@ -139,8 +347,9 @@ export function ExamsClient({
                         <Input
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
-                            placeholder="Course / Exam Title (e.g. Distributed Systems, USMLE Step 1)..."
-                            className="h-10 text-xs bg-secondary/30 border-border/80 focus-visible:ring-1 focus-visible:ring-rose-500"
+                            disabled={isAtLimit || isCreating}
+                            placeholder="Assessment designation (e.g. Distributed Systems, Step 1, AWS SAA)..."
+                            className="h-10 text-sm bg-[#0E0D0C]/40 border-[#F9F8F6]/[0.08] text-[#F9F8F6] placeholder:text-[#F9F8F6]/40 rounded-[8px] focus-visible:ring-1 focus-visible:ring-[#F9F8F6]/30"
                         />
                     </div>
                     <div className="sm:col-span-3">
@@ -148,33 +357,36 @@ export function ExamsClient({
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
-                            className="h-10 text-xs bg-secondary/30 border-border/80 focus-visible:ring-1 focus-visible:ring-rose-500"
+                            disabled={isAtLimit || isCreating}
+                            className="h-10 text-sm bg-[#0E0D0C]/40 border-[#F9F8F6]/[0.08] text-[#F9F8F6] rounded-[8px] focus-visible:ring-1 focus-visible:ring-[#F9F8F6]/30"
                         />
                     </div>
                     <div className="sm:col-span-3">
                         <Button
                             type="submit"
-                            disabled={!subject.trim() || !date || isCreating}
-                            className="btn-tactile w-full h-10 text-xs font-medium bg-foreground text-background hover:bg-foreground/90">
-                            <Plus className="size-3.5 mr-1.5" />
-                            Track Milestone
+                            disabled={!subject.trim() || !date || isCreating || isAtLimit}
+                            className="w-full h-10 text-xs font-sans font-medium bg-[#F9F8F6] text-[#0E0D0C] hover:bg-[#E5E5E5] rounded-[8px] shrink-0"
+                        >
+                            <Plus className="size-3.5 mr-1.5 stroke-[2.5]" />
+                            Establish Target
                         </Button>
                     </div>
                 </form>
             </div>
 
-            {/* --- EXAM ROADMAP CARDS --- */}
+            {/* Exam Roadmaps Matrix */}
             <div className="space-y-6">
-                {initialExams.length > 0 ? (
-                    initialExams.map((exam) => {
-                        const examDate = new Date(exam.date);
-                        const daysLeft = differenceInDays(examDate, new Date());
-                        const hasPassed = isPast(examDate);
-                        const isUrgent = daysLeft <= 3 && !hasPassed;
+                {optimisticExams.length > 0 ? (
+                    optimisticExams.map((exam) => {
+                        const examDate = parseDateSafely(exam.date);
+                        const today = startOfDay(new Date());
+                        const examDay = startOfDay(examDate);
+                        const daysLeft = differenceInCalendarDays(examDay, today);
+                        const hasPassed = isPast(examDay) && daysLeft < 0;
+                        const isUrgent = daysLeft >= 0 && daysLeft <= 3 && !hasPassed;
 
-                        // Syllabus tasks linked to this exam
-                        const examTasks = initialSyllabusTasks.filter((t) =>
-                            t.title.includes(`[EXAM:${exam.id}]`),
+                        const examTasks = optimisticTasks.filter((t) =>
+                            t.title.includes(`[EXAM:${exam.id}]`)
                         );
                         const totalModules = examTasks.length;
                         const completedModules = examTasks.filter((t) => t.completed).length;
@@ -183,210 +395,209 @@ export function ExamsClient({
                             ? Math.round((completedModules / totalModules) * 100)
                             : 0;
 
-                        // Daily Pacing Velocity Calculation
-                        const dailyPaceNeeded =
-                            daysLeft > 0 && remainingModules > 0
-                                ? (remainingModules / daysLeft).toFixed(1)
-                                : null;
+                        // Velocity calculation with calendar-day awareness
+                        let paceLabel = "Self-Paced";
+                        if (hasPassed) {
+                            paceLabel = "Assessment Concluded";
+                        } else if (remainingModules === 0 && totalModules > 0) {
+                            paceLabel = "Curriculum Mastered";
+                        } else if (daysLeft === 0) {
+                            paceLabel = `${remainingModules} units pending today`;
+                        } else if (daysLeft > 0 && remainingModules > 0) {
+                            paceLabel = `${(remainingModules / daysLeft).toFixed(1)} units / day`;
+                        }
 
                         return (
                             <div
                                 key={exam.id}
                                 className={cn(
-                                    "rounded-xl border bg-card p-6 card-elevation transition-all group",
+                                    "rounded-[16px] border bg-[#161616] p-6 transition-colors group",
                                     isUrgent
-                                        ? "border-rose-500/40 shadow-xs shadow-rose-500/5"
-                                        : "border-border/90 hover:border-border",
-                                )}>
+                                        ? "border-[#F87171]/40"
+                                        : "border-[#F9F8F6]/[0.08] hover:border-[#F9F8F6]/15"
+                                )}
+                            >
                                 <div className="grid md:grid-cols-12 gap-8 items-start">
-                                    {/* Left Column (5 Cols): Exam Overview & Pacing Coach */}
+                                    {/* Left Column: Macro Assessment Summary */}
                                     <div className="md:col-span-5 space-y-5">
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
-                                                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500 block">
-                                                    Target Milestone
+                                                <span className="text-[10px] font-mono uppercase tracking-wider text-[#F9F8F6]/60 block">
+                                                    Target Assessment
                                                 </span>
-                                                <h3 className="text-xl font-bold tracking-tight text-foreground mt-0.5">
+                                                <h3 className="text-xl font-medium tracking-tight text-[#F9F8F6] mt-0.5">
                                                     {exam.subject}
                                                 </h3>
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() => deleteExam(exam.id)}
-                                                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 size-7 rounded-md flex items-center justify-center transition-all"
-                                                title="Delete milestone">
+                                                onClick={() => handleDeleteExam(exam.id)}
+                                                className="opacity-0 group-hover:opacity-100 text-[#F9F8F6]/40 hover:text-[#F87171] hover:bg-[#B42318]/10 size-7.5 rounded-[6px] flex items-center justify-center transition-all"
+                                                aria-label="Delete milestone"
+                                            >
                                                 <Trash2 className="size-3.5" />
                                             </button>
                                         </div>
 
-                                        {/* Status & Countdown Badges */}
+                                        {/* Countdown and Date Pills */}
                                         <div className="flex flex-wrap items-center gap-2">
                                             <div
                                                 className={cn(
-                                                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border",
+                                                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-mono border",
                                                     hasPassed
-                                                        ? "bg-secondary text-muted-foreground border-border"
+                                                        ? "bg-[#20201F] text-[#F9F8F6]/40 border-[#F9F8F6]/[0.08]"
                                                         : isUrgent
-                                                          ? "bg-rose-500/10 text-rose-500 border-rose-500/30"
-                                                          : "bg-amber-500/10 text-amber-500 border-amber-500/30",
-                                                )}>
-                                                {isUrgent ? (
-                                                    <AlertTriangle className="size-3.5" />
-                                                ) : (
-                                                    <Timer className="size-3.5" />
+                                                            ? "bg-[#B42318]/15 text-[#F87171] border-[#B42318]/30"
+                                                            : "bg-[#20201F] text-[#F9F8F6]/80 border-[#F9F8F6]/[0.1]"
                                                 )}
-                                                {hasPassed
-                                                    ? "Exam Concluded"
-                                                    : daysLeft === 0
-                                                      ? "Exam Today"
-                                                      : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} remaining`}
+                                            >
+                                                {isUrgent ? (
+                                                    <AlertTriangle className="size-3 text-[#F87171]" />
+                                                ) : (
+                                                    <Timer className="size-3" />
+                                                )}
+                                                <span>
+                                                    {hasPassed
+                                                        ? "Concluded"
+                                                        : daysLeft === 0
+                                                            ? "Examination Today"
+                                                            : `${daysLeft}d remaining`}
+                                                </span>
                                             </div>
 
-                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-secondary/50 text-muted-foreground border border-border/80">
+                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-mono bg-[#20201F] text-[#F9F8F6]/60 border border-[#F9F8F6]/[0.08]">
                                                 <CalendarIcon className="size-3" />
                                                 <span>{format(examDate, "EEE, MMM d, yyyy")}</span>
                                             </div>
                                         </div>
 
-                                        {/* Dynamic Study Velocity Coach */}
-                                        <div className="p-3.5 rounded-lg bg-secondary/30 border border-border/60 space-y-1.5">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-muted-foreground font-medium flex items-center gap-1">
-                                                    <Zap className="size-3 text-amber-500" />
-                                                    Pacing Velocity
+                                        {/* Pacing Velocity Box */}
+                                        <div className="p-3.5 rounded-[8px] bg-[#20201F]/60 border border-[#F9F8F6]/[0.08] space-y-1.5">
+                                            <div className="flex items-center justify-between text-xs font-mono">
+                                                <span className="text-[#F9F8F6]/60 flex items-center gap-1.5">
+                                                    <Zap className="size-3 text-[#FBBF24]" />
+                                                    PACING REQUIRED
                                                 </span>
-                                                <span className="font-semibold text-foreground">
-                                                    {remainingModules === 0 && totalModules > 0
-                                                        ? "Syllabus Complete"
-                                                        : dailyPaceNeeded
-                                                          ? `${dailyPaceNeeded} modules/day`
-                                                          : "Self-Paced"}
-                                                </span>
+                                                <span className="text-[#F9F8F6] font-medium">{paceLabel}</span>
                                             </div>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                                {remainingModules === 0 && totalModules > 0
-                                                    ? "All mapped curriculum modules mastered. Time for revision!"
-                                                    : dailyPaceNeeded
-                                                      ? `Complete ${dailyPaceNeeded} curriculum chapters per day to cover the full syllabus before exam day.`
-                                                      : "Add your curriculum modules to compute your recommended study pace."}
+                                            <p className="text-[11px] font-sans text-[#F9F8F6]/50 leading-relaxed">
+                                                {hasPassed
+                                                    ? "This academic assessment cycle has completed."
+                                                    : remainingModules === 0 && totalModules > 0
+                                                        ? "Full mapped syllabus cleared. Proceed to timed mock examinations."
+                                                        : daysLeft > 0 && remainingModules > 0
+                                                            ? `Complete ${(remainingModules / daysLeft).toFixed(1)} curriculum modules per day to finalize preparation before assessment date.`
+                                                            : "Map curriculum modules on the right to trigger automated pacing calculations."}
                                             </p>
                                         </div>
 
-                                        {/* Readiness Meter */}
+                                        {/* Readiness Gauge */}
                                         <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-muted-foreground font-medium">
-                                                    Preparedness Gauge
-                                                </span>
-                                                <span className="font-bold text-foreground">
-                                                    {progress}%
-                                                </span>
+                                            <div className="flex items-center justify-between text-xs font-mono">
+                                                <span className="text-[#F9F8F6]/60">CURRICULUM READINESS</span>
+                                                <span className="text-[#F9F8F6] font-medium">{progress}%</span>
                                             </div>
-                                            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                                            <div className="w-full bg-[#20201F] h-1.5 rounded-full overflow-hidden">
                                                 <div
                                                     className={cn(
                                                         "h-full rounded-full transition-all duration-500",
-                                                        progress === 100
-                                                            ? "bg-emerald-500"
-                                                            : progress >= 60
-                                                              ? "bg-emerald-500/80"
-                                                              : "bg-amber-500",
+                                                        progress === 100 ? "bg-[#66CC63]" : "bg-[#F9F8F6]/80"
                                                     )}
                                                     style={{ width: `${progress}%` }}
                                                 />
                                             </div>
-                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                            <div className="flex justify-between text-[11px] font-mono text-[#F9F8F6]/40">
                                                 <span>{completedModules} mastered</span>
                                                 <span>{remainingModules} pending</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Right Column (7 Cols): Curriculum Checklist Breakdown */}
-                                    <div className="md:col-span-7 space-y-4 md:border-l md:border-border/60 md:pl-8">
-                                        <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                                    {/* Right Column: Curriculum Modules Breakdown */}
+                                    <div className="md:col-span-7 space-y-4 md:border-l md:border-[#F9F8F6]/[0.06] md:pl-8">
+                                        <div className="flex items-center justify-between pb-3 border-b border-[#F9F8F6]/[0.06]">
                                             <div className="flex items-center gap-2">
-                                                <Layers className="size-4 text-muted-foreground" />
-                                                <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                                                    Curriculum Modules ({totalModules})
+                                                <Layers className="size-4 text-[#F9F8F6]/60" />
+                                                <h4 className="text-xs font-mono uppercase tracking-wider text-[#F9F8F6]">
+                                                    Curriculum Units ({totalModules})
                                                 </h4>
                                             </div>
-                                            <span className="text-[11px] text-muted-foreground">
-                                                {completedModules}/{totalModules} Covered
+                                            <span className="text-xs font-mono text-[#F9F8F6]/60">
+                                                {completedModules}/{totalModules} Cleared
                                             </span>
                                         </div>
 
-                                        {/* Modules List */}
+                                        {/* Modules Checklist */}
                                         <div className="space-y-2">
                                             {examTasks.length > 0 ? (
                                                 examTasks.map((task, index) => {
-                                                    const cleanTitle = task.title.split("]")[1]?.trim() || task.title;
-                                                    const moduleNumber = String(index + 1).padStart(2, "0");
+                                                    const cleanTitle = cleanModuleTitle(task.title);
+                                                    const moduleIdx = String(index + 1).padStart(2, "0");
 
                                                     return (
                                                         <div
                                                             key={task.id}
                                                             className={cn(
-                                                                "flex items-center justify-between p-3 rounded-lg border transition-all group/module",
+                                                                "flex items-center justify-between p-3 rounded-[8px] border transition-colors group/module",
                                                                 task.completed
-                                                                    ? "bg-secondary/20 border-border/40"
-                                                                    : "bg-secondary/40 border-border/80 hover:border-emerald-500/40 hover:bg-secondary/60",
-                                                            )}>
+                                                                    ? "bg-[#0E0D0C]/20 border-[#F9F8F6]/[0.04]"
+                                                                    : "bg-[#20201F]/40 border-[#F9F8F6]/[0.08] hover:border-[#F9F8F6]/20"
+                                                            )}
+                                                        >
                                                             <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-                                                                {/* Tactile Module Checkbox */}
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() =>
-                                                                        toggleTask(task.id, !task.completed)
-                                                                    }
+                                                                    onClick={() => handleToggleModule(task.id, !task.completed)}
+                                                                    aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
                                                                     className={cn(
-                                                                        "size-5 rounded-md border flex items-center justify-center transition-all shrink-0 active:scale-95",
+                                                                        "size-5 rounded-[4px] border flex items-center justify-center transition-all shrink-0",
                                                                         task.completed
-                                                                            ? "bg-emerald-600 border-emerald-600 text-white"
-                                                                            : "border-border/80 bg-card hover:border-emerald-500/60",
-                                                                    )}>
-                                                                    {task.completed && (
-                                                                        <Check className="size-3 stroke-[2.5]" />
+                                                                            ? "bg-[#66CC63] border-[#66CC63] text-[#0E0D0C]"
+                                                                            : "border-[#F9F8F6]/20 bg-[#161616] hover:border-[#F9F8F6]/50"
                                                                     )}
+                                                                >
+                                                                    {task.completed && <Check className="size-3.5 stroke-[2.5]" />}
                                                                 </button>
 
-                                                                <span className="text-[10px] font-mono font-semibold text-muted-foreground shrink-0">
-                                                                    M{moduleNumber}
+                                                                <span className="text-[11px] font-mono text-[#F9F8F6]/40 shrink-0">
+                                                                    M{moduleIdx}
                                                                 </span>
 
                                                                 <span
                                                                     className={cn(
-                                                                        "text-xs font-medium truncate transition-all",
+                                                                        "text-sm font-sans truncate transition-colors",
                                                                         task.completed
-                                                                            ? "text-muted-foreground line-through decoration-muted-foreground/40"
-                                                                            : "text-foreground",
-                                                                    )}>
+                                                                            ? "text-[#F9F8F6]/40 line-through"
+                                                                            : "text-[#F9F8F6]/90 font-medium"
+                                                                    )}
+                                                                >
                                                                     {cleanTitle}
                                                                 </span>
                                                             </div>
 
                                                             <button
                                                                 type="button"
-                                                                onClick={() => deleteTask(task.id)}
-                                                                className="opacity-0 group-hover/module:opacity-100 size-6 text-muted-foreground hover:text-destructive flex items-center justify-center transition-opacity shrink-0"
-                                                                title="Remove module">
-                                                                <Trash2 className="size-3" />
+                                                                onClick={() => handleDeleteModule(task.id)}
+                                                                className="opacity-0 group-hover/module:opacity-100 size-7 text-[#F9F8F6]/40 hover:text-[#F87171] hover:bg-[#B42318]/10 rounded-[4px] flex items-center justify-center transition-all shrink-0"
+                                                                aria-label="Remove module"
+                                                            >
+                                                                <Trash2 className="size-3.5" />
                                                             </button>
                                                         </div>
                                                     );
                                                 })
                                             ) : (
-                                                <div className="py-6 text-center rounded-lg border border-dashed border-border/70 bg-secondary/10">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        No syllabus chapters added yet.
+                                                <div className="py-8 text-center rounded-[8px] border border-dashed border-[#F9F8F6]/[0.08] space-y-1">
+                                                    <p className="text-xs font-sans text-[#F9F8F6]/60">
+                                                        No curriculum modules registered for this target.
                                                     </p>
-                                                    <span className="text-[10px] text-muted-foreground/60 block mt-0.5">
-                                                        Break this subject down into chapters or test topics below.
-                                                    </span>
+                                                    <p className="text-[11px] font-mono text-[#F9F8F6]/30">
+                                                        Add modules below to calculate velocity recommendations.
+                                                    </p>
                                                 </div>
                                             )}
 
-                                            {/* Inline Add Topic Command */}
+                                            {/* Add Module Input Bar */}
                                             <div className="flex gap-2 pt-2">
                                                 <Input
                                                     value={syllabusInputs[exam.id] || ""}
@@ -397,19 +608,19 @@ export function ExamsClient({
                                                         }))
                                                     }
                                                     onKeyDown={(e) =>
-                                                        e.key === "Enter" &&
-                                                        handleAddTopic(exam.id, examDate)
+                                                        e.key === "Enter" && handleAddTopic(exam.id, examDate)
                                                     }
-                                                    placeholder="Add chapter / syllabus module (e.g. Chapter 4: Neural Networks)..."
-                                                    className="h-9 text-xs bg-card border-border/80 focus-visible:ring-1 focus-visible:ring-rose-500"
+                                                    placeholder="Register syllabus unit (e.g. Chapter 4: Distributed Consensus)..."
+                                                    className="h-9 text-sm bg-[#0E0D0C]/40 border-[#F9F8F6]/[0.08] text-[#F9F8F6] placeholder:text-[#F9F8F6]/40 rounded-[8px] focus-visible:ring-1 focus-visible:ring-[#F9F8F6]/30"
                                                 />
                                                 <Button
                                                     type="button"
                                                     onClick={() => handleAddTopic(exam.id, examDate)}
                                                     size="sm"
-                                                    className="btn-tactile h-9 px-3.5 text-xs font-medium bg-foreground text-background hover:bg-foreground/90 shrink-0">
+                                                    className="h-9 px-3.5 text-xs font-sans font-medium bg-[#20201F] text-[#F9F8F6] hover:bg-[#2A2A29] border border-[#F9F8F6]/[0.1] rounded-[8px] shrink-0"
+                                                >
                                                     <Plus className="size-3.5 mr-1" />
-                                                    Add Chapter
+                                                    Add Module
                                                 </Button>
                                             </div>
                                         </div>
@@ -419,17 +630,48 @@ export function ExamsClient({
                         );
                     })
                 ) : (
-                    <div className="p-12 text-center rounded-xl border border-dashed border-border/80 bg-card card-elevation space-y-3">
-                        <GraduationCap className="size-8 text-rose-500/60 mx-auto" />
-                        <h3 className="text-base font-semibold text-foreground">
-                            No academic milestones registered
+                    <div className="p-16 text-center rounded-[16px] border border-dashed border-[#F9F8F6]/[0.08] bg-[#161616] space-y-3">
+                        <GraduationCap className="size-8 text-[#F9F8F6]/30 mx-auto" />
+                        <h3 className="text-base font-medium text-[#F9F8F6]">
+                            No active assessment roadmaps
                         </h3>
-                        <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
-                            Register your upcoming exams, certifications, or project deadlines above. SmartTrack will automatically pace your daily preparation.
+                        <p className="text-xs font-sans text-[#F9F8F6]/60 max-w-md mx-auto leading-relaxed">
+                            Register upcoming exams, technical certifications, or thesis deadlines. The pacing engine will calibrate daily completion quotas.
                         </p>
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function MetricBox({
+    label,
+    value,
+    detail,
+    highlight = false,
+}: {
+    label: string;
+    value: string;
+    detail: string;
+    highlight?: boolean;
+}) {
+    return (
+        <div className="rounded-[12px] bg-[#161616] border border-[#F9F8F6]/[0.08] p-3.5 space-y-1">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#F9F8F6]/60 block">
+                {label}
+            </span>
+            <span
+                className={cn(
+                    "text-xl font-mono font-medium tracking-tight block",
+                    highlight ? "text-[#66CC63]" : "text-[#F9F8F6]"
+                )}
+            >
+                {value}
+            </span>
+            <span className="text-[10px] font-mono text-[#F9F8F6]/40 block truncate">
+                {detail}
+            </span>
         </div>
     );
 }
