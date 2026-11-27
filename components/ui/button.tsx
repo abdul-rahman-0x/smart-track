@@ -1,53 +1,56 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Slot } from "radix-ui";
-
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-    "inline-flex shrink-0 items-center justify-center gap-2 font-sans font-normal tracking-[-0.02em] whitespace-nowrap transition-colors duration-200 outline-none select-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "inline-flex shrink-0 items-center justify-center gap-2 rounded-[7.4px] font-sans font-medium tracking-[-0.02em] whitespace-nowrap transition-all duration-150 select-none outline-none focus-visible:ring-1 focus-visible:ring-[#F9F8F6]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0E0D0C] disabled:pointer-events-none disabled:opacity-40 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
     {
         variants: {
             variant: {
-                // 1. Casca Dark Primary Action (e.g. Header "Request a call", Workspace Actions)
+                // 1. Casca Dark Elevated Surface (Default workspace action)
                 default:
-                    "rounded-[7.4px] border border-white/[0.08] bg-[#20201f] text-[#f9f8f6] hover:bg-[#2a2a29] active:bg-[#1a1a19]",
+                    "border border-[#F9F8F6]/[0.08] bg-[#20201F] text-[#F9F8F6] hover:bg-[#2A2A29] active:bg-[#1A1A19]",
 
-                // 2. Casca Neutral Secondary (e.g. Hero "Get started")
-                secondary:
-                    "rounded-[7.4px] border-0 bg-[#e5e5e5] text-[#0e0d0c] hover:bg-[#d8d8d8] active:bg-[#cecece]",
+                // 2. Casca High-Contrast Bone White (Primary conversion action)
+                primary:
+                    "border-0 bg-[#F9F8F6] text-[#0E0D0C] hover:bg-[#E5E5E5] active:bg-[#D4D3D0]",
 
-                // 3. Casca Bone White High-Contrast (e.g. "Request a demo")
                 white:
-                    "rounded-[7.4px] border-0 bg-[#f9f8f6] text-[#0e0d0c] hover:bg-white active:bg-[#e8e7e5]",
+                    "border-0 bg-[#F9F8F6] text-[#0E0D0C] hover:bg-[#E5E5E5] active:bg-[#D4D3D0]",
 
-                // 4. Casca Hairline Outline
+                // 3. Casca Neutral / Secondary Action
+                secondary:
+                    "border border-[#F9F8F6]/[0.08] bg-[#161616] text-[#F9F8F6] hover:bg-[#20201F] active:bg-[#1A1A19]",
+
+                // 4. Hairline Outline
                 outline:
-                    "rounded-[7.4px] border border-white/10 bg-transparent text-[#f9f8f6] hover:bg-[#161616] hover:border-white/20 active:bg-[#1f1f1e]",
+                    "border border-[#F9F8F6]/15 bg-transparent text-[#F9F8F6] hover:bg-[#161616] hover:border-[#F9F8F6]/25 active:bg-[#20201F]",
 
-                // 5. Casca Ghost Action
+                // 5. Ghost Action
                 ghost:
-                    "rounded-[7.4px] border-0 bg-transparent text-[#f9f8f6]/60 hover:bg-[#161616] hover:text-[#f9f8f6] active:bg-[#20201f]",
+                    "border-0 bg-transparent text-[#F9F8F6]/60 hover:bg-[#161616] hover:text-[#F9F8F6] active:bg-[#20201F]",
 
                 // 6. System Destructive
                 destructive:
-                    "rounded-[7.4px] border border-[#b42318]/30 bg-[#b42318]/15 text-[#f9f8f6] hover:bg-[#b42318]/25 active:bg-[#b42318]/35",
+                    "border border-[#B42318]/30 bg-[#B42318]/15 text-[#F9F8F6] hover:bg-[#B42318]/25 active:bg-[#B42318]/35",
 
-                link: "text-[#f9f8f6] underline-offset-4 hover:underline",
+                // 7. Inline Link
+                link: "text-[#F9F8F6] underline-offset-4 hover:underline p-0 h-auto",
             },
             size: {
-                // Casca Standard Body Button (14.8px font, 11.1px x 14.8px padding)
-                default: "h-auto px-[14.8px] py-[11.1px] text-[14.8px] leading-[1.2]",
+                // Standard Body Button (~38px height)
+                default: "h-[38px] px-3.5 py-2 text-[14px] leading-none",
 
-                // Casca Nav / Compact Button (13px font, 7.4px x 11.1px padding, 32px height)
-                sm: "h-[32px] px-[11.1px] py-[7.4px] text-[16px] leading-[1.2]",
+                // Compact Action (~32px height)
+                sm: "h-[32px] px-2.5 py-1.5 text-[12.5px] leading-none",
 
-                // Elevated Hero Button
-                lg: "h-auto px-5 py-3 text-[15.5px] leading-[1.2]",
+                // Prominent / Hero Action (~44px height)
+                lg: "h-[44px] px-5 py-3 text-[15px] leading-none font-medium",
 
-                // Square Icons with Casca radius
-                icon: "h-9 w-9 p-0 rounded-[7.4px]",
-                "icon-sm": "h-8 w-8 p-0 rounded-[7.4px]",
+                // Icon Buttons
+                icon: "size-9 p-0",
+                "icon-sm": "size-8 p-0",
             },
         },
         defaultVariants: {
@@ -63,22 +66,21 @@ interface ButtonProps
     asChild?: boolean;
 }
 
-function Button({
-    className,
-    variant,
-    size,
-    asChild = false,
-    ...props
-}: ButtonProps) {
-    const Comp = asChild ? Slot.Root : "button";
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+    ({ className, variant, size, asChild = false, ...props }, ref) => {
+        const Comp = asChild ? Slot : "button";
 
-    return (
-        <Comp
-            data-slot="button"
-            className={cn(buttonVariants({ variant, size, className }))}
-            {...props}
-        />
-    );
-}
+        return (
+            <Comp
+                ref={ref}
+                data-slot="button"
+                className={cn(buttonVariants({ variant, size, className }))}
+                {...props}
+            />
+        );
+    }
+);
+
+Button.displayName = "Button";
 
 export { Button, buttonVariants };
