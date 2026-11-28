@@ -81,22 +81,9 @@ export default async function Header() {
         <div className="flex items-center">
           <Link
             href={session ? "/dashboard" : "/login"}
-            className="inline-flex h-[32px] items-center gap-2 rounded-[7.4px] border border-white/[0.08] bg-[#20201f] px-3 font-sans text-[13px] font-normal tracking-[-0.02em] text-[#f9f8f6] transition-colors duration-200 hover:bg-[#2b2b2a]"
+            className="inline-flex h-[32px] items-center justify-center rounded-[7.4px] bg-[#f9f8f6] px-3.5 font-sans text-[13px] font-medium leading-none tracking-[-0.02em] text-[#0e0d0c] transition-all duration-150 hover:bg-white hover:opacity-90"
           >
-            <span>{session ? "Dashboard" : "Request access"}</span>
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[#f9f8f6]/60"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+            {session ? "Dashboard" : "Sign In"}
           </Link>
         </div>
       </header>
